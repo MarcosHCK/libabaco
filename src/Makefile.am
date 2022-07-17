@@ -24,13 +24,6 @@ typelibdir=${girdir}
 # Some variables
 #
 
-PACKAGE_NAME=@PACKAGE_NAME@
-PACKAGE_RELEASE=@PACKAGE_RELEASE@
-PACKAGE_VERSION_MAJOR=@PACKAGE_VERSION_MAJOR@
-PACKAGE_VERSION_MINOR=@PACKAGE_VERSION_MINOR@
-PACKAGE_VERSION_MICRO=@PACKAGE_VERSION_MICRO@
-PACKAGE_VERSION_BUILD=@PACKAGE_VERSION_BUILD@
-
 EXTRA_DIST=
 CLEANFILES=
 VOID=
@@ -56,6 +49,8 @@ pkglib_LTLIBRARIES=\
 	$(VOID)
 
 pkginclude_HEADERS=\
+	ast.h \
+	libabaco.h \
 	$(VOID)
 
 #
@@ -79,7 +74,10 @@ abaco_LDADD=\
 	$(VOID)
 
 libabaco_la_SOURCES=\
+	ast.c \
 	libabaco.c \
+	rules.vala \
+	symbol.c \
 	$(VOID)
 libabaco_la_CFLAGS=\
 	$(GIO_CFLAGS) \
@@ -99,8 +97,23 @@ libabaco_la_LIBADD=\
 	$(VOID)
 libabaco_la_LDFLAGS=\
 	-rpath ${pkglibdir} \
-	-release ${PACKAGE_RELEASE} \
-	-version-info ${PACKAGE_VERSION_MAJOR}:${PACKAGE_VERSION_MINOR}:${PACKAGE_VERSION_MICRO} \
+	-version-info 0:0:0 \
+	$(VOID)
+
+#
+# Vala
+#
+
+AM_VALAFLAGS=\
+	--vapidir=vapi/ \
+	--vapi-comments \
+	--hide-internal \
+	--abi-stability \
+	--header libabaco.h \
+	--library libabaco \
+	--pkg config \
+	-D DEBUG=${DEBUG} \
+	-D DEVELOPER=${DEVELOPER} \
 	$(VOID)
 
 #
@@ -123,8 +136,6 @@ DYNASM_CFLAGS=\
 
 include $(INTROSPECTION_MAKEFILE)
 
-GIR_VERSION=${PACKAGE_VERSION_MAJOR}.${PACKAGE_VERSION_MINOR}
-
 GIR_INCLUDES=\
 	Gio-2.0 \
 	GLib-2.0 \
@@ -135,22 +146,6 @@ SUFFIXES+=.typelib .gir
 
 .gir.typelib:
 	${INTROSPECTION_COMPILER} --output $@ $<
-
-Matcal-${GIR_VERSION}.gir: sources.list ${pkglib_LTLIBRARIES}
-	${INTROSPECTION_SCANNER} \
-		--nsversion "${GIR_VERSION}" \
-		--library "${pkglib_LTLIBRARIES}" \
-		--warn-all \
-		--namespace "Matcal" \
-		--cflags-begin \
-			-I${top_srcdir}/src/ \
-		--cflags-end \
-		--libtool "$(LIBTOOL)" \
-		--sources-top-dirs=${top_srcdir} \
-		--include-first-in-src="config.h" \
-		$(addprefix --include , ${GIR_INCLUDES}) \
-		--filelist $< --output $@ \
-		$(VOID)
 
 gir_DATA=\
 	$(VOID)

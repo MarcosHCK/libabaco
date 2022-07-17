@@ -16,10 +16,81 @@
  *
  */
 #include <config.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <libabaco.h>
+#include <glib.h>
 
-int main() {
-  printf("Hello World!\n");
+static void
+print_tree (AbacoAstNode* node, int depth)
+{
+  gchar* pre = g_strnfill (depth * 2, ' ');
+  g_print ("%s-%s\r\n", pre, abaco_ast_node_get_symbol (node));
+
+  abaco_ast_node_children_foreach
+  (node,
+   (AbacoAstForeach) print_tree,
+   GINT_TO_POINTER (depth + 1));
+}
+
+int
+main (int argc, char* argv [])
+{
+  GError* tmp_err = NULL;
+  GOptionContext* ctx = NULL;
+  GOptionEntry entries[] =
+  {
+    {NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, NULL},
+  };
+
+  ctx =
+  g_option_context_new (NULL);
+  g_option_context_set_help_enabled (ctx, TRUE);
+  g_option_context_set_ignore_unknown_options (ctx, FALSE);
+  g_option_context_add_main_entries (ctx, entries, "en_US");
+
+  g_option_context_parse (ctx, &argc, &argv, &tmp_err);
+  g_option_context_free (ctx);
+
+  if (G_UNLIKELY (tmp_err != NULL))
+    {
+      g_critical
+      ("(%s): %s: %i: %s",
+       G_STRLOC,
+       g_quark_to_string
+       (tmp_err->domain),
+       tmp_err->code,
+       tmp_err->message);
+      g_error_free (tmp_err);
+      g_assert_not_reached ();
+    }
+  else
+    {
+      AbacoRules* rules = NULL;
+      AbacoAstNode* ast = NULL;
+      int i;
+
+      rules = abaco_rules_new ();
+
+      for (i = 1; i < argc; i++)
+      {
+        ast =
+        abaco_rules_parse(rules, argv [i], -1, &tmp_err);
+        if (G_UNLIKELY (tmp_err != NULL))
+          {
+            g_critical
+            ("(%s): %s: %i: %s",
+             G_STRLOC,
+             g_quark_to_string
+             (tmp_err->domain),
+             tmp_err->code,
+             tmp_err->message);
+            g_error_free (tmp_err);
+            g_object_unref (rules);
+            g_assert_not_reached ();
+          }
+
+        print_tree (ast, 0);
+        abaco_ast_node_unref (ast);
+      }
+    }
 return 0;
 }

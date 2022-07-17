@@ -15,4 +15,29 @@
  * along with libabaco.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#include <config.h>
+
+namespace Abaco.Ast
+{
+  [CCode (cheader_filename = "ast.h")]
+  public enum SymbolKind
+  {
+    CONSTANT,
+    VARIABLE,
+    FUNCTION,
+  }
+
+  [CCode (cheader_filename = "ast.h")]
+  public class Node
+  {
+    public uint ref_count;
+    public Node (string symbol, SymbolKind kind);
+    public unowned string get_symbol ();
+    public SymbolKind get_kind ();
+
+    public string symbol { get { return get_symbol (); } }
+    public SymbolKind kind { get { return get_kind (); } }
+
+    public void append (Node child);
+    public void prepend (Node child);
+  }
+}

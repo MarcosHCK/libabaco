@@ -25,11 +25,10 @@ AC_PREREQ([2.69])
 #
 
 m4_define([v_VERSION], m4_esyscmd_s([git describe]))
-m4_define([v_MAJOR], m4_esyscmd_s([git describe | sed -e 's/v\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\-\([a-z]*\)/\1/']))
-m4_define([v_MINOR], m4_esyscmd_s([git describe | sed -e 's/v\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\-\([a-z]*\)/\2/']))
-m4_define([v_MICRO], m4_esyscmd_s([git describe | sed -e 's/v\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\-\([a-z]*\)/\3/']))
-m4_define([v_BUILD], m4_esyscmd_s([git describe | sed -e 's/v\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\-\([a-z]*\)/\4/']))
-m4_define([v_STAGE], m4_esyscmd_s([git describe | sed -e 's/v\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\-\([a-z]*\)/\5/']))
+m4_define([v_MAJOR], m4_esyscmd_s([git describe | sed -e 's/^v\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\-\([a-z]*\).*/\1/']))
+m4_define([v_MINOR], m4_esyscmd_s([git describe | sed -e 's/^v\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\-\([a-z]*\).*/\2/']))
+m4_define([v_MICRO], m4_esyscmd_s([git describe | sed -e 's/^v\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\-\([a-z]*\).*/\3/']))
+m4_define([v_STAGE], m4_esyscmd_s([git describe | sed -e 's/^v\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\-\([a-z]*\).*/\4/']))
 
 #
 # Initialize autoconf
@@ -102,8 +101,6 @@ AC_SUBST([PACKAGE_VERSION_MINOR], [v_MINOR])
 AC_DEFINE_UNQUOTED([PACKAGE_VERSION_MINOR], [v_MINOR], [Version minor number])
 AC_SUBST([PACKAGE_VERSION_MICRO], [v_MICRO])
 AC_DEFINE_UNQUOTED([PACKAGE_VERSION_MICRO], [v_MICRO], [Version micro number])
-AC_SUBST([PACKAGE_VERSION_BUILD], [v_BUILD])
-AC_DEFINE_UNQUOTED([PACKAGE_VERSION_BUILD], [v_BUILD], [Version build number])
 AC_SUBST([PACKAGE_RELEASE], ["v_STAGE"])
 AC_DEFINE([PACKAGE_RELEASE], ["v_STAGE"], [Release stage])
 
