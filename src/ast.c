@@ -96,6 +96,11 @@ return __typeid__;
 static void
 abaco_ast_node_finalize (AbacoAstNode* self)
 {
+  abaco_ast_node_children_foreach
+  (self,
+   abaco_ast_node_unref,
+   NULL);
+
   g_signal_handlers_destroy (self);
   _g_free0 (self->priv->symbol);
 }

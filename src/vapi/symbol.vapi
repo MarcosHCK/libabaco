@@ -62,20 +62,4 @@ namespace Abaco
       public FunctionClass fnclass;
     }
   }
-
-  [SimpleType]
-  [IntegerType (rank = 9)]
-  [CCode (cheader_filename = "symbol.h", cname = "Symbol")]
-  internal struct Symbol : uintptr
-  {
-    [CCode (cname = "_symbol_make")]
-    public Symbol (uint index, Symbols.SymbolKind kind);
-    [CCode (cname = "_symbol_index")]
-    public uint get_index ();
-    [CCode (cname = "_symbol_kind")]
-    public Symbols.SymbolKind get_kind ();
-
-    public uint index { get { return get_index (); } }
-    public Symbols.SymbolKind kind { get { return get_kind (); } }
-  }
 }

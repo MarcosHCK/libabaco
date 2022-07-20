@@ -91,6 +91,8 @@ main (int argc, char* argv [])
         print_tree (ast, 0);
         abaco_ast_node_unref (ast);
       }
+
+      g_object_unref (rules);
     }
 return 0;
 }

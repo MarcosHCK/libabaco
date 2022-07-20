@@ -25,7 +25,6 @@
 typedef struct _OperatorClass OperatorClass;
 typedef struct _FunctionClass FunctionClass;
 typedef struct _SymbolClass SymbolClass;
-typedef gpointer Symbol;
 
 typedef enum
 {
@@ -66,23 +65,5 @@ struct _SymbolClass
     FunctionClass fnclass;
   };
 };
-
-#if __cplusplus
-extern "C" {
-#endif // __cplusplus
-
-G_GNUC_INTERNAL
-Symbol
-_symbol_make (guint index, SymbolKind kind);
-G_GNUC_INTERNAL
-guint
-_symbol_index (Symbol sym);
-G_GNUC_INTERNAL
-SymbolKind
-_symbol_kind (Symbol sym);
-
-#if __cplusplus
-}
-#endif // __cplusplus
 
 #endif // __SYMBOL__

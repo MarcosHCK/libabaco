@@ -35,4 +35,5 @@ libabaco.h
 abaco.exe
 abaco
 
+parser.c
 rules.c

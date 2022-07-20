@@ -76,8 +76,8 @@ abaco_LDADD=\
 libabaco_la_SOURCES=\
 	ast.c \
 	libabaco.c \
+	parser.vala \
 	rules.vala \
-	symbol.c \
 	$(VOID)
 libabaco_la_CFLAGS=\
 	$(GIO_CFLAGS) \
