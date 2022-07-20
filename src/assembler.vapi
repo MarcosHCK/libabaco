@@ -16,28 +16,12 @@
  *
  */
 
-namespace Abaco.Ast
+namespace Abaco
 {
-  [CCode (cheader_filename = "ast.h")]
-  public enum SymbolKind
+  [CCode (cheader_filename = "assembler.h")]
+  public sealed class Assembler : GLib.Object
   {
-    CONSTANT,
-    VARIABLE,
-    FUNCTION,
-  }
-
-  [CCode (cheader_filename = "ast.h")]
-  public class Node
-  {
-    public uint ref_count;
-    public Node (string symbol, SymbolKind kind);
-    public unowned string get_symbol ();
-    public SymbolKind get_kind ();
-
-    public string symbol { get { return get_symbol (); } }
-    public SymbolKind kind { get { return get_kind (); } }
-
-    public void append (Node child);
-    public void prepend (Node child);
+    public Assembler ();
+    public GLib.Bytes assemble (Ast.Node tree) throws GLib.Error;
   }
 }

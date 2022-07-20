@@ -29,6 +29,9 @@ struct _AbacoAstNodePrivate
   gchar* symbol;
   AbacoAstSymbolKind kind;
 
+  /* annotations */
+  GData* notes;
+
   struct _Chain
   {
     AbacoAstNode* self;
@@ -102,6 +105,7 @@ abaco_ast_node_finalize (AbacoAstNode* self)
    NULL);
 
   g_signal_handlers_destroy (self);
+  g_datalist_clear (&self->priv->notes);
   _g_free0 (self->priv->symbol);
 }
 
@@ -117,6 +121,7 @@ abaco_ast_node_init (AbacoAstNode* self)
 {
 	self->priv = G_STRUCT_MEMBER_P (self, AbacoAstNode_private_offset);
   g_atomic_ref_count_init (& self->ref_count);
+  g_datalist_init (&self->priv->notes);
 
   self->priv->chain.self = self;
   self->priv->chain.next = NULL;
@@ -201,6 +206,14 @@ abaco_ast_node_prepend (AbacoAstNode* self, AbacoAstNode* child)
   abaco_ast_node_ref (child);
 }
 
+guint
+abaco_ast_node_n_children (AbacoAstNode* self)
+{
+  g_return_if_fail (ABACO_AST_IS_NODE (self));
+  GNode* a = (GNode*) & self->priv->chain;
+return g_node_n_children (a);
+}
+
 static void
 _foreach (GNode* b, gpointer pdata)
 {
@@ -217,4 +230,34 @@ abaco_ast_node_children_foreach (AbacoAstNode* self, AbacoAstForeach callback, g
   gpointer pdata [2] = { callback, data };
   GNode* a = (GNode*) & self->priv->chain;
   g_node_children_foreach (a, G_TRAVERSE_ALL, _foreach, pdata);
+}
+
+void
+abaco_ast_node_set_note (AbacoAstNode* self, const gchar* name, gpointer data, GDestroyNotify notify)
+{
+  g_return_if_fail (ABACO_AST_IS_NODE (self));
+  g_return_if_fail (name != NULL);
+  AbacoAstNodePrivate* priv = self->priv;
+  GQuark quark = g_quark_from_string (name);
+  g_datalist_id_set_data_full (& priv->notes, quark, data, notify);
+}
+
+gpointer
+abaco_ast_node_get_node (AbacoAstNode* self, const gchar* name)
+{
+  g_return_if_fail (ABACO_AST_IS_NODE (self));
+  g_return_if_fail (name != NULL);
+  AbacoAstNodePrivate* priv = self->priv;
+  GQuark quark = g_quark_from_string (name);
+return g_datalist_id_get_data (& priv->notes, quark);
+}
+
+gpointer
+abaco_ast_node_steal_node (AbacoAstNode* self, const gchar* name)
+{
+  g_return_if_fail (ABACO_AST_IS_NODE (self));
+  g_return_if_fail (name != NULL);
+  AbacoAstNodePrivate* priv = self->priv;
+  GQuark quark = g_quark_from_string (name);
+return g_datalist_id_remove_no_notify (& priv->notes, quark);
 }

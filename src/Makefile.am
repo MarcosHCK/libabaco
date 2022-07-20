@@ -74,6 +74,8 @@ abaco_LDADD=\
 	$(VOID)
 
 libabaco_la_SOURCES=\
+	assembler.c \
+	astate.c \
 	ast.c \
 	libabaco.c \
 	parser.vala \
@@ -105,6 +107,7 @@ libabaco_la_LDFLAGS=\
 #
 
 AM_VALAFLAGS=\
+	--vapidir=. \
 	--vapidir=vapi/ \
 	--vapi-comments \
 	--hide-internal \

@@ -19,9 +19,6 @@
 #define __LIBABACO_AST__ 1
 #include <glib-object.h>
 
-typedef struct _AbacoAstNode AbacoAstNode;
-typedef struct _AbacoAstData AbacoAstData;
-
 #if !defined(VALA_EXTERN)
 #if defined(_MSC_VER)
 #define VALA_EXTERN __declspec(dllexport) extern
@@ -77,16 +74,27 @@ VALA_EXTERN AbacoAstNode*
 abaco_ast_node_ref (AbacoAstNode* node);
 VALA_EXTERN void
 abaco_ast_node_unref (AbacoAstNode* node);
+
 VALA_EXTERN const gchar*
 abaco_ast_node_get_symbol (AbacoAstNode* self);
 VALA_EXTERN AbacoAstSymbolKind
 abaco_ast_node_get_kind (AbacoAstNode* self);
+
 VALA_EXTERN void
 abaco_ast_node_append (AbacoAstNode* self, AbacoAstNode* child);
 VALA_EXTERN void
 abaco_ast_node_prepend (AbacoAstNode* self, AbacoAstNode* child);
+VALA_EXTERN guint
+abaco_ast_node_n_children (AbacoAstNode* self);
 VALA_EXTERN void
 abaco_ast_node_children_foreach (AbacoAstNode* self, AbacoAstForeach callback, gpointer data);
+
+VALA_EXTERN void
+abaco_ast_node_set_note (AbacoAstNode* self, const gchar* name, gpointer data, GDestroyNotify notify);
+VALA_EXTERN gpointer
+abaco_ast_node_get_node (AbacoAstNode* self, const gchar* name);
+VALA_EXTERN gpointer
+abaco_ast_node_steal_node (AbacoAstNode* self, const gchar* name);
 
 #if __cplusplus
 }

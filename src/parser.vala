@@ -49,7 +49,7 @@ namespace Abaco
     unowned Symbol? peeksym () { return operators.peek_head (); }
     void popsym () { operators.pop_head (); }
 
-    void pushvar (string token) throws GLib.Error
+    void pushvar (string token, bool variable) throws GLib.Error
     {
       bool valid = true;
       if (pklass != null)
@@ -75,7 +75,8 @@ namespace Abaco
       }
       else
       {
-        var node = new Ast.Node (token, Ast.SymbolKind.CONSTANT);
+        var kind = (variable) ? Ast.SymbolKind.VARIABLE : Ast.SymbolKind.CONSTANT;
+        var node = new Ast.Node (token, kind);
         output.push_head (node);
       }
     }
@@ -159,10 +160,8 @@ namespace Abaco
         }
         break;
 
-      case SymbolKind.CONSTANT:
-      case SymbolKind.VARIABLE:
-        pushvar (token);
-        break;
+      case SymbolKind.CONSTANT: pushvar (token, false); break;
+      case SymbolKind.VARIABLE: pushvar (token, true); break;
 
       case SymbolKind.COMMA:
         if (args.length == 0)

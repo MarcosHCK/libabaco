@@ -37,6 +37,10 @@ namespace Abaco
     private int fn_token = -1;
     private int fn_class = -1;
 
+  #if DEVELOPER == 1
+    public Assembler placeholder1 { get; set; }
+  #endif // DEVELOPER
+
   /*
    * properties
    *
@@ -304,21 +308,14 @@ namespace Abaco
         /* Variables */
         klass = SymbolClass ();
         klass.kind = SymbolKind.VARIABLE;
-        add_token ("[a-zA-Z]", -1);
-        add_class ("[a-zA-Z]", -1, ref klass);
+        add_token ("[\\p{L}]", -1);
+        add_class ("[\\p{L}]", -1, ref klass);
 
         /* Constants */
         klass = SymbolClass ();
         klass.kind = SymbolKind.CONSTANT;
         add_token ("[0-9\\.]+", -1);
         add_class ("[0-9\\.]+", -1, ref klass);
-
-
-        add_operator ("[\\+]", false, 2, false);
-        add_operator ("[\\-]", false, 2, false);
-        add_operator ("[\\*]", false, 3, false);
-        add_operator ("[\\/]", false, 3, false);
-        add_function ("max", -1);
 
         klass = SymbolClass ();
         klass.kind = SymbolKind.UNKNOWN;
