@@ -183,6 +183,7 @@ AC_CHECK_LIB([gmp], [__gmpz_init])
 
 AC_C_INLINE
 AC_TYPE_SIZE_T
+AC_CHECK_TYPES([ptrdiff_t])
 
 #
 # Checks for library functions.
