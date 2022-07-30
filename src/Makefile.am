@@ -80,6 +80,7 @@ libabaco_la_SOURCES=\
 	libabaco.c \
 	parser.vala \
 	rules.vala \
+	vm.vala \
 	$(VOID)
 libabaco_la_CFLAGS=\
 	$(GIO_CFLAGS) \

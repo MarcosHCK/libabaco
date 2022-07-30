@@ -37,3 +37,4 @@ abaco
 
 parser.c
 rules.c
+vm.c
