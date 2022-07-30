@@ -45,7 +45,7 @@ void
 _astate_finish (AState* s)
 {
   GError* tmp_err = NULL;
-g_print ("offseta %i\r\n", G_STRUCT_OFFSET (AState, n_regs));
+
   if (g_queue_get_length (&s->unused) != s->n_regs)
     g_warning ("Leftover registry un-allocated");
 
