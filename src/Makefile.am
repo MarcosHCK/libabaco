@@ -50,6 +50,8 @@ pkglib_LTLIBRARIES=\
 
 pkginclude_HEADERS=\
 	ast.h \
+	assembler.h \
+	bytecode.h \
 	libabaco.h \
 	$(VOID)
 
@@ -71,6 +73,11 @@ abaco_LDADD=\
 	$(GLIB_LIBS) \
 	$(GOBJECT_LIBS) \
 	libabaco.la \
+	$(VOID)
+
+EXTRA_DIST+=\
+	astate.h \
+	symbol.h \
 	$(VOID)
 
 libabaco_la_SOURCES=\
