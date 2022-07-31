@@ -83,7 +83,7 @@ EXTRA_DIST+=\
 libabaco_la_SOURCES=\
 	assembler.c \
 	astate.c \
-	ast.vala \
+	ast.c \
 	libabaco.c \
 	parser.vala \
 	rules.vala \
