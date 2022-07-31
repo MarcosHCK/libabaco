@@ -15,6 +15,22 @@
 # along with libabaco. If not, see <http://www.gnu.org/licenses/>.
 #
 
-SUBDIRS=\
-	abaco \
-	mp
+*.[ao]
+*.la
+*.lai
+*.lo
+*.Po
+*.Plo
+*.Tpo
+
+*.gir
+*.typelib
+.dirstamp
+
+libclosure*.so*
+libclosure*.dll*
+libclosure*.dylib*
+closure.vapi
+closure.h
+
+closure.c

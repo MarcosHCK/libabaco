@@ -28,12 +28,8 @@ VOID=
 # - declare
 #
 
-pkglib_LTLIBRARIES=\
-	libabaco_gmp.la \
-	$(VOID)
-
-pkginclude_HEADERS=\
-	libabaco_gmp.h \
+noinst_LTLIBRARIES=\
+	libclosure.la \
 	$(VOID)
 
 #
@@ -41,23 +37,35 @@ pkginclude_HEADERS=\
 # - sources
 #
 
-libabaco_gmp_la_SOURCES=\
+libclosure_la_SOURCES=\
+	closure.vala \
 	$(VOID)
-libabaco_gmp_la_CFLAGS=\
-	$(ABACO_CFLAGS) \
-	$(ABACO_AST_CFLAGS) \
+libclosure_la_CFLAGS=\
 	$(GLIB_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
-	-DG_LOG_DOMAIN=\"AbacoGMP\" \
-	-D__LIBABACO_GMP_INSIDE__=1 \
+	-I../ \
+	-DG_LOG_DOMAIN=\"AbacoMP\" \
+	-D__LIBABACO_MP_INSIDE__=1 \
 	$(VOID)
-libabaco_gmp_la_LIBADD=\
-	$(ABACO_LIBS) \
-	$(ABACO_AST_LIBS) \
+libclosure_la_LIBADD=\
 	$(GLIB_LIBS) \
 	$(GOBJECT_LIBS) \
 	$(VOID)
-libabaco_gmp_la_LDFLAGS=\
-	-rpath ${pkglibdir} \
-	-version-info 0:0:0 \
+libclosure_la_LDFLAGS=\
+	$(VOID)
+
+#
+# Vala
+#
+
+AM_VALAFLAGS=\
+	--vapidir=vapi/ \
+	--vapi-comments \
+	--hide-internal \
+	--abi-stability \
+	--header closure.h \
+	--library closure \
+	--pkg config \
+	-D DEBUG=${DEBUG} \
+	-D DEVELOPER=${DEVELOPER} \
 	$(VOID)

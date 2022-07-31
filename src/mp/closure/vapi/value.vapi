@@ -15,7 +15,12 @@
  * along with libabaco.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#ifndef __LIBABACO_GMP__
-#define __LIBABACO_GMP__ 1
 
-#endif // __LIBABACO_GMP__
+[CCode (cprefix = "Mp", lower_case_cprefix = "_mp_")]
+namespace _Mp
+{
+  [CCode (cheader_filename = "value.h")]
+  public class Stack
+  {
+  }
+}

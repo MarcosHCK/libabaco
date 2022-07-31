@@ -159,8 +159,8 @@ AC_SUBST([ABACO_CFLAGS], [-I\${top_builddir}/src/abaco/])
 AC_SUBST([ABACO_LIBS], [\${top_builddir}/src/abaco/libabaco.la])
 AC_SUBST([ABACO_AST_CFLAGS], [-I\${top_builddir}/src/abaco/ast/])
 AC_SUBST([ABACO_AST_LIBS], [\${top_builddir}/src/abaco/ast/libabaco_ast.la])
-AC_SUBST([ABACO_GMP_CFLAGS], [-I\${top_builddir}/src/gmp/])
-AC_SUBST([ABACO_GMP_LIBS], [\${top_builddir}/src/gmp/libabaco_gmp.la])
+AC_SUBST([ABACO_MP_CFLAGS], [-I\${top_builddir}/src/mp/])
+AC_SUBST([ABACO_MP_LIBS], [\${top_builddir}/src/mp/libabaco_mp.la])
 
 #
 # Check for libraries using pkg-config
@@ -169,9 +169,9 @@ AC_SUBST([ABACO_GMP_LIBS], [\${top_builddir}/src/gmp/libabaco_gmp.la])
 
 PKG_CHECK_MODULES([GIO], [gio-2.0])
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
+PKG_CHECK_MODULES([GMP], [gmp])
 PKG_CHECK_MODULES([GOBJECT], [gobject-2.0])
-PKG_CHECK_MODULES([LIBGMP], [gmp])
-PKG_CHECK_MODULES([LIBMPFR], [mpfr])
+PKG_CHECK_MODULES([MPFR], [mpfr])
 
 #
 # Check for libraries
@@ -210,7 +210,8 @@ AC_CONFIG_FILES([
 src/Makefile
 src/abaco/Makefile
 src/abaco/ast/Makefile
-src/gmp/Makefile
+src/mp/Makefile
+src/mp/closure/Makefile
 test/Makefile
 Makefile
 ])

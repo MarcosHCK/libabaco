@@ -24,12 +24,24 @@ CLEANFILES=
 VOID=
 
 #
+# Subdirectories
+#
+
+SUBDIRS=\
+	closure \
+	$(VOID)
+
+#
 # Binaries and libraries
 # - declare
 #
 
-noinst_PROGRAMS=\
-	abaco \
+pkglib_LTLIBRARIES=\
+	libabaco_mp.la \
+	$(VOID)
+
+pkginclude_HEADERS=\
+	libabaco_mp.h \
 	$(VOID)
 
 #
@@ -37,20 +49,35 @@ noinst_PROGRAMS=\
 # - sources
 #
 
-abaco_SOURCES=\
-	abaco.c \
+EXTRA_DIST+=\
+	value.h \
 	$(VOID)
-abaco_CFLAGS=\
+
+libabaco_mp_la_SOURCES=\
+	value.c \
+	vm.c \
+	$(VOID)
+libabaco_mp_la_CFLAGS=\
 	$(ABACO_CFLAGS) \
 	$(ABACO_AST_CFLAGS) \
-	$(ABACO_MP_CFLAGS) \
 	$(GLIB_CFLAGS) \
+	$(GMP_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
+	$(MPFR_CFLAGS) \
+	-Iclosure/ \
+	-DG_LOG_DOMAIN=\"AbacoMP\" \
+	-D__LIBABACO_MP_INSIDE__=1 \
 	$(VOID)
-abaco_LDADD=\
+libabaco_mp_la_LIBADD=\
 	$(ABACO_LIBS) \
 	$(ABACO_AST_LIBS) \
-	$(ABACO_MP_LIBS) \
 	$(GLIB_LIBS) \
+	$(GMP_LIBS) \
 	$(GOBJECT_LIBS) \
+	$(MPFR_LIBS) \
+	closure/libclosure.la \
+	$(VOID)
+libabaco_mp_la_LDFLAGS=\
+	-rpath ${pkglibdir} \
+	-version-info 0:0:0 \
 	$(VOID)
