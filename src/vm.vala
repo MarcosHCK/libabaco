@@ -22,6 +22,13 @@ namespace Abaco
 
   public interface VM
   {
+    public virtual int call (int args)
+    {
+      warning ("%s::call not implemented for '%s'",
+        typeof (VM).name (), GLib.Type.from_instance (this).name ());
+      return -1;
+    }
+
     public virtual void settop (int top)
     {
       warning ("%s::settop not implemented for '%s'",
