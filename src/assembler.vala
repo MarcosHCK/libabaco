@@ -18,10 +18,11 @@
 
 namespace Abaco
 {
-  [CCode (cheader_filename = "assembler.h")]
-  public sealed class Assembler : GLib.Object
+  public class Assembler : GLib.Object
   {
-    public Assembler ();
-    public GLib.Bytes assemble (Ast.Node tree) throws GLib.Error;
+    public GLib.Bytes assemble (Ast.Node tree) throws GLib.Error
+    {
+      return Patch.assemble (tree);
+    }
   }
 }

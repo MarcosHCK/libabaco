@@ -16,56 +16,14 @@
  *
  */
 #include <config.h>
-#include <assembler.h>
+#include <assemble.h>
 #include <astate.h>
 #include <gio/gio.h>
 
-#define ABACO_RULES_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), ABACO_TYPE_RULES, AbacoAssemblerClass))
-#define ABACO_IS_RULES_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), ABACO_TYPE_RULES))
-#define ABACO_RULES_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), ABACO_TYPE_RULES, AbacoAssemblerClass))
-typedef struct _AbacoAssemblerClass AbacoAssemblerClass;
 #define _g_object_unref0(var) (var = (g_object_unref (var), NULL))
 #define _g_bytes_unref0(var) (var = (g_bytes_unref (var), NULL))
 #define _g_error_free0(var) (var = (g_error_free (var), NULL))
 #define _g_free0(var) (var = (g_free (var), NULL))
-
-struct _AbacoAssembler
-{
-  GObject parent_instance;
-
-  /*<private>*/
-};
-
-struct _AbacoAssemblerClass
-{
-  GObjectClass parent_instance;
-};
-
-G_DEFINE_FINAL_TYPE (AbacoAssembler, abaco_assembler, G_TYPE_OBJECT);
-
-static void
-abaco_assembler_class_init (AbacoAssemblerClass* klass)
-{
-}
-
-static void
-abaco_assembler_init (AbacoAssembler* self)
-{
-}
-
-VALA_EXTERN AbacoAssembler*
-abaco_assembler_new ()
-{
-  return
-  g_object_new
-  (ABACO_TYPE_ASSEMBLER,
-   NULL);
-}
-
-/*
- * Assembler
- *
- */
 
 typedef struct
 {
@@ -329,10 +287,8 @@ _node_compiler (AbacoAstNode* node, ATraverse* t)
 #undef lookup
 
 GBytes*
-abaco_assembler_assemble (AbacoAssembler* assembler, AbacoAstNode* tree, GError** error)
+_patch_assemble (AbacoAstNode* tree, GError** error)
 {
-  g_return_val_if_fail (ABACO_IS_ASSEMBLER (assembler), NULL);
-  AbacoAssembler* self = (assembler);
   ATraverse traverse = {0};
   ATraverse* t = &traverse;
   GError* tmp_err = NULL;

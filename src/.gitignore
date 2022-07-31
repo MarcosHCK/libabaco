@@ -35,6 +35,7 @@ libabaco.h
 abaco.exe
 abaco
 
+assembler.c
 parser.c
 rules.c
 vm.c
