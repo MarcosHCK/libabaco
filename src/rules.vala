@@ -37,10 +37,6 @@ namespace Abaco
     private int fn_token = -1;
     private int fn_class = -1;
 
-  #if DEVELOPER == 1
-    public Assembler placeholder1 { get; set; }
-  #endif // DEVELOPER
-
   /*
    * properties
    *

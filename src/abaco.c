@@ -369,13 +369,13 @@ main (int argc, char* argv [])
   else
     {
       AbacoRules* rules = NULL;
-      AbacoAssembler* assembler = NULL;
+      //AbacoAssembler* assembler = NULL;
       AbacoAstNode* ast = NULL;
       GBytes* code = NULL;
       int i;
 
       rules = abaco_rules_new ();
-      assembler = abaco_assembler_new ();
+      //assembler = abaco_assembler_new ();
 
       abaco_rules_add_operator (rules, "[\\+]", FALSE, 2, FALSE, &tmp_err);
         g_assert_no_error (tmp_err);
@@ -409,7 +409,7 @@ main (int argc, char* argv [])
 
         g_print ("\r\n");
         print_tree (ast, 0);
-
+/*
         code =
         abaco_assembler_assemble (assembler, ast, &tmp_err);
         if (G_UNLIKELY (tmp_err != NULL))
@@ -452,11 +452,11 @@ main (int argc, char* argv [])
                     took / mpt,
                     took / spt);
         }
-
+*/
         abaco_ast_node_unref (ast);
       }
 
-      g_object_unref (assembler);
+      //g_object_unref (assembler);
       g_object_unref (rules);
     }
 return 0;
