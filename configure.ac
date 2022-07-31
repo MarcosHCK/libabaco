@@ -35,7 +35,7 @@ m4_define([v_STAGE], m4_esyscmd_s([git describe | sed -e 's/^v\([0-9]*\)\.\([0-9
 #
 
 AC_INIT([libabaco], [v_VERSION], [libabaco.bugs@hcktm.com], [libabaco], [https://github.com/MarcosHCK/libabaco/])
-AC_CONFIG_SRCDIR([src/libabaco.c])
+AC_CONFIG_SRCDIR([src/abaco/libabaco.c])
 AC_LANG([C])
 
 #
@@ -208,7 +208,9 @@ AC_CONFIG_HEADERS([config.h])
 
 AC_CONFIG_FILES([
 src/Makefile
-src/ast/Makefile
+src/abaco/Makefile
+src/abaco/ast/Makefile
+src/gmp/Makefile
 test/Makefile
 Makefile
 ])

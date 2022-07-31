@@ -24,12 +24,25 @@ CLEANFILES=
 VOID=
 
 #
+# Subdirectories
+#
+
+SUBDIRS=\
+	ast \
+	$(VOID)
+
+#
 # Binaries and libraries
 # - declare
 #
 
-noinst_PROGRAMS=\
-	abaco \
+pkglib_LTLIBRARIES=\
+	libabaco.la \
+	$(VOID)
+
+pkginclude_HEADERS=\
+	bytecode.h \
+	libabaco.h \
 	$(VOID)
 
 #
@@ -37,18 +50,54 @@ noinst_PROGRAMS=\
 # - sources
 #
 
-abaco_SOURCES=\
-	abaco.c \
+EXTRA_DIST+=\
+	assemble.h \
+	astate.h \
+	symbol.h \
 	$(VOID)
-abaco_CFLAGS=\
-	$(ABACO_CFLAGS) \
+
+libabaco_la_SOURCES=\
+	assembler.vala \
+	assemble.c \
+	astate.c \
+	libabaco.c \
+	parser.vala \
+	rules.vala \
+	vm.vala \
+	$(VOID)
+libabaco_la_CFLAGS=\
 	$(ABACO_AST_CFLAGS) \
+	$(GIO_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
+	-DG_LOG_DOMAIN=\"Abaco\" \
+	-D__LIBABACO_INSIDE__=1 \
 	$(VOID)
-abaco_LDADD=\
-	$(ABACO_LIBS) \
+libabaco_la_LIBADD=\
 	$(ABACO_AST_LIBS) \
+	$(GIO_LIBS) \
 	$(GLIB_LIBS) \
 	$(GOBJECT_LIBS) \
+	$(VOID)
+libabaco_la_LDFLAGS=\
+	-rpath ${pkglibdir} \
+	-version-info 0:0:0 \
+	$(VOID)
+
+#
+# Vala
+#
+
+AM_VALAFLAGS=\
+	--vapidir=. \
+	--vapidir=ast/ \
+	--vapidir=vapi/ \
+	--vapi-comments \
+	--hide-internal \
+	--abi-stability \
+	--header libabaco.h \
+	--library libabaco \
+	--pkg config \
+	-D DEBUG=${DEBUG} \
+	-D DEVELOPER=${DEVELOPER} \
 	$(VOID)
