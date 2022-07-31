@@ -201,6 +201,7 @@ AC_CONFIG_HEADERS([config.h])
 
 AC_CONFIG_FILES([
 src/Makefile
+src/ast/Makefile
 Makefile
 ])
 

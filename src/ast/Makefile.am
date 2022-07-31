@@ -15,6 +15,11 @@
 # along with libabaco. If not, see <http://www.gnu.org/licenses/>.
 #
 
+# Keep sync with
+# - src/ast/Makefile.am
+girdir=${pkgdatadir}/gir/
+typelibdir=${girdir}
+
 #
 # Some variables
 #
@@ -24,30 +29,16 @@ CLEANFILES=
 VOID=
 
 #
-# Subdirectories
-#
-
-SUBDIRS=\
-	ast \
-	$(VOID)
-
-#
 # Binaries and libraries
 # - declare
 #
 
-noinst_PROGRAMS=\
-	abaco \
-	$(VOID)
-
 pkglib_LTLIBRARIES=\
-	libabaco.la \
+	libabaco_ast.la \
 	$(VOID)
 
 pkginclude_HEADERS=\
-	assembler.h \
-	bytecode.h \
-	libabaco.h \
+	ast.h \
 	$(VOID)
 
 #
@@ -55,69 +46,48 @@ pkginclude_HEADERS=\
 # - sources
 #
 
-abaco_SOURCES=\
-	abaco.c \
+libabaco_ast_la_SOURCES=\
+	ast.c \
 	$(VOID)
-abaco_CFLAGS=\
-	$(GIO_CFLAGS) \
+libabaco_ast_la_CFLAGS=\
 	$(GLIB_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
-	-Iast/ \
+	-DG_LOG_DOMAIN=\"AbacoAst\" \
+	-D__LIBABACO_AST_INSIDE__=1 \
 	$(VOID)
-abaco_LDADD=\
-	$(GIO_LIBS) \
+libabaco_ast_la_LIBADD=\
 	$(GLIB_LIBS) \
 	$(GOBJECT_LIBS) \
-	libabaco.la \
-	ast/libabaco_ast.la \
 	$(VOID)
-
-EXTRA_DIST+=\
-	astate.h \
-	symbol.h \
-	$(VOID)
-
-libabaco_la_SOURCES=\
-	assembler.c \
-	astate.c \
-	libabaco.c \
-	parser.vala \
-	rules.vala \
-	vm.vala \
-	$(VOID)
-libabaco_la_CFLAGS=\
-	$(GIO_CFLAGS) \
-	$(GLIB_CFLAGS) \
-	$(GOBJECT_CFLAGS) \
-	-Iast/ \
-	-DG_LOG_DOMAIN=\"Abaco\" \
-	-D__LIBABACO_INSIDE__=1 \
-	$(VOID)
-libabaco_la_LIBADD=\
-	$(GIO_LIBS) \
-	$(GLIB_LIBS) \
-	$(GOBJECT_LIBS) \
-	ast/libabaco_ast.la \
-	$(VOID)
-libabaco_la_LDFLAGS=\
+libabaco_ast_la_LDFLAGS=\
 	-rpath ${pkglibdir} \
 	-version-info 0:0:0 \
 	$(VOID)
 
 #
-# Vala
+# GObject-Introspection
 #
 
-AM_VALAFLAGS=\
-	--vapidir=. \
-	--vapidir=ast/ \
-	--vapidir=vapi/ \
-	--vapi-comments \
-	--hide-internal \
-	--abi-stability \
-	--header libabaco.h \
-	--library libabaco \
-	--pkg config \
-	-D DEBUG=${DEBUG} \
-	-D DEVELOPER=${DEVELOPER} \
+include $(INTROSPECTION_MAKEFILE)
+
+GIR_INCLUDES=\
+	GLib-2.0 \
+	GObject-2.0 \
+	$(VOID)
+
+SUFFIXES=.typelib .gir
+
+.gir.typelib:
+	${INTROSPECTION_COMPILER} --output $@ $<
+
+gir_DATA=\
+	$(VOID)
+
+typelib_DATA=\
+	$(gir_DATA:.gir=.typelib) \
+	$(VOID)
+
+CLEANFILES+=\
+	$(gir_DATA) \
+	$(typelib_DATA) \
 	$(VOID)
