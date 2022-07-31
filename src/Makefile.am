@@ -36,10 +36,6 @@ SUBDIRS=\
 # - declare
 #
 
-noinst_PROGRAMS=\
-	abaco \
-	$(VOID)
-
 pkglib_LTLIBRARIES=\
 	libabaco.la \
 	$(VOID)
@@ -53,23 +49,6 @@ pkginclude_HEADERS=\
 # Binaries and libraries
 # - sources
 #
-
-abaco_SOURCES=\
-	abaco.c \
-	$(VOID)
-abaco_CFLAGS=\
-	$(GIO_CFLAGS) \
-	$(GLIB_CFLAGS) \
-	$(GOBJECT_CFLAGS) \
-	-Iast/ \
-	$(VOID)
-abaco_LDADD=\
-	$(GIO_LIBS) \
-	$(GLIB_LIBS) \
-	$(GOBJECT_LIBS) \
-	libabaco.la \
-	ast/libabaco_ast.la \
-	$(VOID)
 
 EXTRA_DIST+=\
 	assemble.h \

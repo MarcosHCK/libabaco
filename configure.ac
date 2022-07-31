@@ -155,6 +155,13 @@ else
   AC_SUBST([DYNASM], [\${LUA}\ \${top_builddir}/build/dynasm/dynasm.lua])
 fi
 
+AC_SUBST([ABACO_CFLAGS], [-I\${top_builddir}/src/abaco/])
+AC_SUBST([ABACO_LIBS], [\${top_builddir}/src/abaco/libabaco.la])
+AC_SUBST([ABACO_AST_CFLAGS], [-I\${top_builddir}/src/abaco/ast/])
+AC_SUBST([ABACO_AST_LIBS], [\${top_builddir}/src/abaco/ast/libabaco_ast.la])
+AC_SUBST([ABACO_GMP_CFLAGS], [-I\${top_builddir}/src/gmp/])
+AC_SUBST([ABACO_GMP_LIBS], [\${top_builddir}/src/gmp/libabaco_gmp.la])
+
 #
 # Check for libraries using pkg-config
 # Note: keep sorted alphabetically 
@@ -202,6 +209,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
 src/Makefile
 src/ast/Makefile
+test/Makefile
 Makefile
 ])
 

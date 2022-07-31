@@ -15,25 +15,42 @@
 # along with libabaco. If not, see <http://www.gnu.org/licenses/>.
 #
 
-*.[ao]
-*.la
-*.lai
-*.lo
-*.Po
-*.Plo
-*.Tpo
+#
+# Some variables
+#
 
-*.gir
-*.typelib
-.dirstamp
+EXTRA_DIST=
+CLEANFILES=
+VOID=
 
-libabaco*.so*
-libabaco*.dll*
-libabaco*.dylib*
-libabaco.vapi
-libabaco.h
+#
+# Binaries and libraries
+# - declare
+#
 
-assembler.c
-parser.c
-rules.c
-vm.c
+noinst_PROGRAMS=\
+	abaco \
+	$(VOID)
+
+#
+# Binaries and libraries
+# - sources
+#
+
+abaco_SOURCES=\
+	abaco.c \
+	$(VOID)
+abaco_CFLAGS=\
+	$(GIO_CFLAGS) \
+	$(GLIB_CFLAGS) \
+	$(GOBJECT_CFLAGS) \
+	-I../src/ \
+	-I../src/ast/ \
+	$(VOID)
+abaco_LDADD=\
+	$(GIO_LIBS) \
+	$(GLIB_LIBS) \
+	$(GOBJECT_LIBS) \
+	../src/libabaco.la \
+	../src/ast/libabaco_ast.la \
+	$(VOID)

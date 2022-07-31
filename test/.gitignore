@@ -23,17 +23,5 @@
 *.Plo
 *.Tpo
 
-*.gir
-*.typelib
-.dirstamp
-
-libabaco*.so*
-libabaco*.dll*
-libabaco*.dylib*
-libabaco.vapi
-libabaco.h
-
-assembler.c
-parser.c
-rules.c
-vm.c
+abaco.exe
+abaco
