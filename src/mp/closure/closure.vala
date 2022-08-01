@@ -18,8 +18,7 @@
 
 namespace _Mp
 {
-  public abstract class Closure
+  public abstract class CClosure : Abaco.Closure
   {
-    public abstract int call (Stack stack, int args);
   }
 }
