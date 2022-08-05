@@ -238,10 +238,11 @@ get_stack (GBytes* bytes)
 return NULL;
 }
 
-static void
+static gdouble
 execute (GBytes* bytes)
 {
   gsize i, length;
+  gdouble result = -1;
   const guint8* data = g_bytes_get_data (bytes, &length);
   const guint8* top = data + length;
   const BSection* section = NULL;
@@ -325,7 +326,7 @@ execute (GBytes* bytes)
         }
         break;
       case B_OPCODE_RETURN:
-        //g_print ("result %f\r\n", (gfloat) stack [opcode->abc.a]);
+        result = stack [opcode->abc.a];
         break;
       }
 
@@ -334,6 +335,7 @@ execute (GBytes* bytes)
   }
 
   g_free (stack);
+return result;
 }
 
 int
@@ -439,13 +441,19 @@ main (int argc, char* argv [])
         const gdouble mpt = spt / (gdouble) 1000;
         const int tries = 100000;
         const int reps = 10;
+        gdouble result;
+        gdouble last;
         int j;
 
         for (i = 0; i < reps; i++)
         {
           clock_t start = clock ();
           for (j = 0; j < tries; j++)
-            execute (code);
+            result = execute (code);
+
+          if (i > 0 && result != last)
+            g_error ("Mismatching results for same input");
+          last = result;
 
           clock_t stop = clock ();
           gdouble took = (gdouble) (stop - start);
@@ -456,6 +464,7 @@ main (int argc, char* argv [])
                     took / spt);
         }
 
+        g_print ("result %lf\r\n", result);
         abaco_ast_node_unref (ast);
       }
 

@@ -121,14 +121,4 @@ typedef enum
   B_OPCODE_MAXOPCODE,
 } BOpcodeCode;
 
-#if DEVELOPER == 1
-#include <glib.h>
-
-G_STATIC_ASSERT (sizeof (BHeader) == sizeof (guint64));
-G_STATIC_ASSERT (sizeof (BSection) == sizeof (guint64));
-G_STATIC_ASSERT (sizeof (BSection) % B_SECTION_ALIGN == 0);
-G_STATIC_ASSERT (sizeof (BOpcode) == sizeof (guint32));
-G_STATIC_ASSERT (((1 << 6) - 1) >= B_OPCODE_MAXOPCODE);
-
-#endif // DEVELOPER
 #endif // __LIBABACO_BYTECODE__

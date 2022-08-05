@@ -50,17 +50,14 @@ pkginclude_HEADERS=\
 #
 
 EXTRA_DIST+=\
-	assemble.h \
 	astpatch.h \
-	astate.h \
 	symbol.h \
 	$(VOID)
 
 libabaco_la_SOURCES=\
 	assembler.vala \
-	assemble.c \
 	ast.vala \
-	astate.c \
+	bytecode.c \
 	libabaco.c \
 	parser.vala \
 	rules.vala \
@@ -98,6 +95,9 @@ AM_VALAFLAGS=\
 	--header libabaco.h \
 	--library libabaco \
 	--pkg config \
+	--pkg bytecode \
+	--pkg patch \
+	--pkg symbol \
 	-D DEBUG=${DEBUG} \
 	-D DEVELOPER=${DEVELOPER} \
 	$(VOID)

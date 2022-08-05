@@ -18,13 +18,6 @@
 
 namespace Abaco
 {
-  [CCode (cprefix = "_patch_")]
-  public class Patch
-  {
-    [CCode (cheader_filename = "assemble.h")]
-    public static GLib.Bytes assemble (Ast.Node tree) throws GLib.Error;
-  }
-
   [CCode (cprefix = "Ast")]
   namespace AstPatch
   {

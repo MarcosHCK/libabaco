@@ -15,23 +15,12 @@
  * along with libabaco.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#ifndef __PATCH_ASSEMBLE__
-#define __PATCH_ASSEMBLE__ 1
-#ifndef __LIBABACO_INSIDE__
-# error "Private header"
-#endif // __LIBABACO_INSIDE__
-#include <glib-object.h>
+#include <config.h>
+#include <bytecode.h>
+#include <glib.h>
 
-#if __cplusplus
-extern "C" {
-#endif // __cplusplus
-
-G_GNUC_INTERNAL
-GBytes*
-_patch_assemble (gpointer tree, GError** tmp_err);
-
-#if __cplusplus
-}
-#endif // __cplusplus
-
-#endif // __PATCH_ASSEMBLE__
+G_STATIC_ASSERT (sizeof (BHeader) == sizeof (guint64));
+G_STATIC_ASSERT (sizeof (BSection) == sizeof (guint64));
+G_STATIC_ASSERT (sizeof (BSection) % B_SECTION_ALIGN == 0);
+G_STATIC_ASSERT (sizeof (BOpcode) == sizeof (guint32));
+G_STATIC_ASSERT (((1 << 6) - 1) >= B_OPCODE_MAXOPCODE);
