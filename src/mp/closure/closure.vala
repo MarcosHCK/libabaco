@@ -18,7 +18,7 @@
 
 namespace _Mp
 {
-  public abstract class CClosure : Abaco.Closure
+  public abstract class CClosure
   {
   }
 }

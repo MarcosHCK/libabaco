@@ -42,14 +42,12 @@ abaco_SOURCES=\
 	$(VOID)
 abaco_CFLAGS=\
 	$(ABACO_CFLAGS) \
-	$(ABACO_AST_CFLAGS) \
 	$(ABACO_MP_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
 	$(VOID)
 abaco_LDADD=\
 	$(ABACO_LIBS) \
-	$(ABACO_AST_LIBS) \
 	$(ABACO_MP_LIBS) \
 	$(GLIB_LIBS) \
 	$(GOBJECT_LIBS) \

@@ -157,8 +157,6 @@ fi
 
 AC_SUBST([ABACO_CFLAGS], [-I\${top_builddir}/src/abaco/])
 AC_SUBST([ABACO_LIBS], [\${top_builddir}/src/abaco/libabaco.la])
-AC_SUBST([ABACO_AST_CFLAGS], [-I\${top_builddir}/src/abaco/ast/])
-AC_SUBST([ABACO_AST_LIBS], [\${top_builddir}/src/abaco/ast/libabaco_ast.la])
 AC_SUBST([ABACO_MP_CFLAGS], [-I\${top_builddir}/src/mp/])
 AC_SUBST([ABACO_MP_LIBS], [\${top_builddir}/src/mp/libabaco_mp.la])
 
@@ -209,7 +207,6 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
 src/Makefile
 src/abaco/Makefile
-src/abaco/ast/Makefile
 src/mp/Makefile
 src/mp/closure/Makefile
 test/Makefile

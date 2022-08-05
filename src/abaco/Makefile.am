@@ -28,7 +28,6 @@ VOID=
 #
 
 SUBDIRS=\
-	ast \
 	$(VOID)
 
 #
@@ -52,6 +51,7 @@ pkginclude_HEADERS=\
 
 EXTRA_DIST+=\
 	assemble.h \
+	astpatch.h \
 	astate.h \
 	symbol.h \
 	$(VOID)
@@ -59,6 +59,7 @@ EXTRA_DIST+=\
 libabaco_la_SOURCES=\
 	assembler.vala \
 	assemble.c \
+	ast.vala \
 	astate.c \
 	libabaco.c \
 	parser.vala \
@@ -90,7 +91,6 @@ libabaco_la_LDFLAGS=\
 
 AM_VALAFLAGS=\
 	--vapidir=. \
-	--vapidir=ast/ \
 	--vapidir=vapi/ \
 	--vapi-comments \
 	--hide-internal \

@@ -59,7 +59,6 @@ libabaco_mp_la_SOURCES=\
 	$(VOID)
 libabaco_mp_la_CFLAGS=\
 	$(ABACO_CFLAGS) \
-	$(ABACO_AST_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GMP_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
@@ -70,7 +69,6 @@ libabaco_mp_la_CFLAGS=\
 	$(VOID)
 libabaco_mp_la_LIBADD=\
 	$(ABACO_LIBS) \
-	$(ABACO_AST_LIBS) \
 	$(GLIB_LIBS) \
 	$(GMP_LIBS) \
 	$(GOBJECT_LIBS) \

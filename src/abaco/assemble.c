@@ -20,6 +20,18 @@
 #include <astate.h>
 #include <gio/gio.h>
 
+#define ABACO_AST_SYMBOL_KIND_CONSTANT (0)
+#define ABACO_AST_SYMBOL_KIND_VARIABLE (1)
+#define ABACO_AST_SYMBOL_KIND_FUNCTION (2)
+typedef struct _AbacoAstNode AbacoAstNode;
+typedef int AbacoAstSymbolKind;
+typedef void (* AbacoAstForeach) (AbacoAstNode* node);
+
+const gchar* abaco_ast_node_get_symbol (AbacoAstNode* self);
+AbacoAstSymbolKind abaco_ast_node_get_kind (AbacoAstNode* self);
+guint abaco_ast_node_n_children (AbacoAstNode* self);
+void abaco_ast_node_children_foreach (AbacoAstNode* self, AbacoAstForeach callback, gpointer data);
+
 #define _g_object_unref0(var) (var = (g_object_unref (var), NULL))
 #define _g_bytes_unref0(var) (var = (g_bytes_unref (var), NULL))
 #define _g_error_free0(var) (var = (g_error_free (var), NULL))
@@ -287,7 +299,7 @@ _node_compiler (AbacoAstNode* node, ATraverse* t)
 #undef lookup
 
 GBytes*
-_patch_assemble (AbacoAstNode* tree, GError** error)
+_patch_assemble (gpointer tree, GError** error)
 {
   ATraverse traverse = {0};
   ATraverse* t = &traverse;

@@ -17,8 +17,10 @@
  */
 #ifndef __PATCH_ASSEMBLE__
 #define __PATCH_ASSEMBLE__ 1
+#ifndef __LIBABACO_INSIDE__
+# error "Private header"
+#endif // __LIBABACO_INSIDE__
 #include <glib-object.h>
-#include <ast.h>
 
 #if __cplusplus
 extern "C" {
@@ -26,7 +28,7 @@ extern "C" {
 
 G_GNUC_INTERNAL
 GBytes*
-_patch_assemble (AbacoAstNode* tree, GError** tmp_err);
+_patch_assemble (gpointer tree, GError** tmp_err);
 
 #if __cplusplus
 }

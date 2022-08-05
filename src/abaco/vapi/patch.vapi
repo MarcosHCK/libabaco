@@ -24,4 +24,27 @@ namespace Abaco
     [CCode (cheader_filename = "assemble.h")]
     public static GLib.Bytes assemble (Ast.Node tree) throws GLib.Error;
   }
+
+  [CCode (cprefix = "Ast")]
+  namespace AstPatch
+  {
+    [CCode (cheader_filename = "astpatch.h", cprefix = "_ast_")]
+    public struct Chain
+    {
+      public void* self;
+      public Chain? next;
+      public Chain? prev;
+      public Chain? parent;
+      public Chain? children;
+
+      public static void append (ref Chain a, ref Chain b);
+      public static void prepend (ref Chain a, ref Chain b);
+      [CCode (cname = "g_node_n_children")]
+      public static uint n_children (ref Chain a);
+      public static void foreach_data (ref Chain a, Foreach callback);
+    }
+
+    [CCode (cheader_filename = "astpatch.h", cprefix = "_ast_")]
+    public delegate void Foreach (void* data);
+  }
 }
