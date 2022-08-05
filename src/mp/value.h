@@ -30,6 +30,13 @@ typedef struct _MpStack MpStack;
 extern "C" {
 #endif // __cplusplus
 
+#define _mp_stack_get_length(stack) \
+  (G_GNUC_EXTENSION ({ \
+    gpointer __stack = (stack); \
+    GArray* __array = __stack; \
+    __array->len; \
+  }))
+
 EXPORT MpStack*
 _mp_stack_new ();
 EXPORT gpointer
@@ -38,6 +45,8 @@ EXPORT void
 _mp_stack_unref (gpointer stack);
 EXPORT const gchar*
 _mp_stack_type (MpStack* stack, int index);
+EXPORT void
+_mp_stack_transfer (MpStack* dst, MpStack* src);
 EXPORT void
 _mp_stack_push_index (MpStack* stack, int index);
 EXPORT void

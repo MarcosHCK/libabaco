@@ -138,6 +138,26 @@ return table [pmp->type];
 }
 
 void
+_mp_stack_transfer (MpStack* dst, MpStack* src)
+{
+  g_return_if_fail (src != NULL);
+  g_return_if_fail (dst != NULL);
+  GArray* asrc = (gpointer) src;
+  GArray* adst = (gpointer) dst;
+
+  if (src->length > 0)
+  {
+    guint last = src->length - 1;
+    MpValue* pmp = & src->values [last];
+    MpValue mp = *pmp;
+
+    pmp->type = MP_TYPE_NIL;
+    g_array_remove_index (asrc, last);
+    g_array_append_val (adst, mp);
+  }
+}
+
+void
 _mp_stack_push_index (MpStack* stack, int index)
 {
   g_return_if_fail (stack != NULL);
@@ -150,8 +170,8 @@ _mp_stack_push_index (MpStack* stack, int index)
   switch (pmp->type)
   {
   case MP_TYPE_VALUE:
-      mp.type = MP_TYPE_VALUE;
-      g_value_init (& mp.value, G_VALUE_TYPE (&pmp->value));
+    mp.type = MP_TYPE_VALUE;
+    g_value_init (& mp.value, G_VALUE_TYPE (&pmp->value));
     g_value_copy (& pmp->value, & mp.value);
     g_array_append_val (array, mp);
     break;
@@ -181,7 +201,7 @@ _mp_stack_push_index (MpStack* stack, int index)
     g_assert_not_reached ();
     break;
   default:
-    g_warning ("Can't copy this type of value");
+    g_warning ("Can't copy this value");
     break;
   }
 }

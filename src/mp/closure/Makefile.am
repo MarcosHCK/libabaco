@@ -41,9 +41,10 @@ libclosure_la_SOURCES=\
 	closure.vala \
 	$(VOID)
 libclosure_la_CFLAGS=\
+	$(ABACO_CFLAGS) \
+	$(ABACO_MP_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
-	-I../ \
 	-DG_LOG_DOMAIN=\"AbacoMP\" \
 	-D__LIBABACO_MP_INSIDE__=1 \
 	$(VOID)
@@ -60,12 +61,16 @@ libclosure_la_LDFLAGS=\
 
 AM_VALAFLAGS=\
 	--vapidir=vapi/ \
+	--vapidir=../../abaco/ \
 	--vapi-comments \
 	--hide-internal \
 	--abi-stability \
 	--header closure.h \
 	--library closure \
 	--pkg config \
+	--pkg libabaco \
+	--pkg value \
+	--pkg vm \
 	-D DEBUG=${DEBUG} \
 	-D DEVELOPER=${DEVELOPER} \
 	$(VOID)

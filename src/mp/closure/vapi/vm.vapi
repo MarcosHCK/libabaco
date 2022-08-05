@@ -16,32 +16,10 @@
  *
  */
 
-[CCode (cprefix = "Mp", lower_case_cprefix = "_mp_")]
-namespace Mp
+namespace Abaco
 {
-  public abstract class Closure : Abaco.Closure
+  [CCode (cheader_filename = "libabaco_mp.h")]
+  public class MP : GLib.Object, VM
   {
-    public Mp.Stack stack;
-
-    /* abstract API */
-
-    public abstract int invoke (Abaco.VM vm, int args) throws GLib.Error;
-
-    /* public API */
-
-    public virtual void pushupvalue (int index, Stack dst) throws GLib.Error
-    {
-    }
-
-    /* constructors */
-
-    protected Closure (Stack src, int upvalues)
-      requires (upvalues > 0)
-      requires (src.get_length () >= upvalues)
-    {
-      stack = new Mp.Stack ();
-      for (int i = 0; i < upvalues; i++)
-        src.transfer (stack);
-    }
   }
 }
