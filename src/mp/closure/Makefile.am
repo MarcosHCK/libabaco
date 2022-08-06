@@ -38,6 +38,7 @@ noinst_LTLIBRARIES=\
 #
 
 libclosure_la_SOURCES=\
+	cclosure.vala \
 	closure.vala \
 	$(VOID)
 libclosure_la_CFLAGS=\

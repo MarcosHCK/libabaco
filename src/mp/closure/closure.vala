@@ -19,29 +19,37 @@
 [CCode (cprefix = "Mp", lower_case_cprefix = "_mp_")]
 namespace Mp
 {
-  public abstract class Closure : Abaco.Closure
+  public abstract class Closure
   {
-    public Mp.Stack stack;
+    private Mp.Stack stack;
+    public uint upvalues { get { return stack.get_length (); } }
 
     /* abstract API */
 
-    public abstract int invoke (Abaco.VM vm, int args) throws GLib.Error;
+    public abstract int invoke (Abaco.MP vm);
 
     /* public API */
 
-    public virtual void pushupvalue (int index, Stack dst) throws GLib.Error
+    public virtual void pushupvalue (int index, Stack dst)
     {
+      if (index > upvalues || index < 0)
+        error ("Invalid index");
+      stack.push_index ((int) upvalues - index - 1);
+      dst.transfer (stack);
     }
 
     /* constructors */
 
     protected Closure (Stack src, int upvalues)
-      requires (upvalues > 0)
-      requires (src.get_length () >= upvalues)
     {
+      if (unlikely (upvalues < 0))
+        error ("Upvalue number most be no negative");
+      if (unlikely (upvalues > src.get_length ()))
+        error ("Can't push more upvalues than values");
+
       stack = new Mp.Stack ();
       for (int i = 0; i < upvalues; i++)
-        src.transfer (stack);
+        stack.transfer (src);
     }
   }
 }

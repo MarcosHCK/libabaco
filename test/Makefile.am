@@ -30,6 +30,7 @@ VOID=
 
 noinst_PROGRAMS=\
 	abaco \
+	abacomp \
 	$(VOID)
 
 #
@@ -47,6 +48,22 @@ abaco_CFLAGS=\
 	$(GOBJECT_CFLAGS) \
 	$(VOID)
 abaco_LDADD=\
+	$(ABACO_LIBS) \
+	$(ABACO_MP_LIBS) \
+	$(GLIB_LIBS) \
+	$(GOBJECT_LIBS) \
+	$(VOID)
+
+abacomp_SOURCES=\
+	abacomp.c \
+	$(VOID)
+abacomp_CFLAGS=\
+	$(ABACO_CFLAGS) \
+	$(ABACO_MP_CFLAGS) \
+	$(GLIB_CFLAGS) \
+	$(GOBJECT_CFLAGS) \
+	$(VOID)
+abacomp_LDADD=\
 	$(ABACO_LIBS) \
 	$(ABACO_MP_LIBS) \
 	$(GLIB_LIBS) \

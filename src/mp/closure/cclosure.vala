@@ -19,22 +19,19 @@
 [CCode (cprefix = "Mp", lower_case_cprefix = "_mp_")]
 namespace Mp
 {
-  [CCode (cheader_filename = "value.h")]
-  public class Stack
+  public class CClosure : Closure
   {
-    public Stack ();
-    public uint get_length ();
-    public unowned string type (int index);
-    public void transfer (Stack dst);
-    public void push_index (int index);
-    public void insert (int index);
-    public void remove (int index);
-    public void push_value (ref GLib.Value value);
-    public void push_string (string value, int @base);
-    public void push_double (double value);
-    public void peek_value (int index, out GLib.Value value);
-    public string peek_string (int index);
-    public double peek_double (int index);
-    public void pop ();
+    private Abaco.CClosure callback;
+    public override int invoke (Abaco.MP vm)
+    {
+      return callback (vm);
+    }
+
+    [CCode (type = "MpClosure*")]
+    public CClosure (Stack stack, int upvalues, owned Abaco.CClosure callback)
+    {
+      base (stack, upvalues);
+      this.callback = callback;
+    }
   }
 }

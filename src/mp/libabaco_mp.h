@@ -48,6 +48,20 @@ VALA_EXTERN GType
 abaco_mp_get_type (void) G_GNUC_CONST;
 VALA_EXTERN AbacoVM*
 abaco_mp_new (void);
+VALA_EXTERN const gchar*
+abaco_mp_typename (AbacoMP* self, gint index);
+VALA_EXTERN void
+abaco_mp_pushdouble (AbacoMP* self, double value);
+VALA_EXTERN void
+abaco_mp_pushldouble (AbacoMP* self, long double value);
+VALA_EXTERN gboolean
+abaco_mp_pushstring (AbacoMP* self, const gchar* value, int base);
+VALA_EXTERN double
+abaco_mp_todouble (AbacoMP* self, gint index);
+VALA_EXTERN long double
+abaco_mp_toldouble (AbacoMP* self, gint index);
+VALA_EXTERN gchar*
+abaco_mp_tostring (AbacoMP* self, gint index, int base);
 
 #if __cplusplus
 }

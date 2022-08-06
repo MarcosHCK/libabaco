@@ -48,6 +48,8 @@ _mp_stack_type (MpStack* stack, int index);
 EXPORT void
 _mp_stack_transfer (MpStack* dst, MpStack* src);
 EXPORT void
+_mp_stack_push_nil (MpStack* stack);
+EXPORT void
 _mp_stack_push_index (MpStack* stack, int index);
 EXPORT void
 _mp_stack_insert (MpStack* stack, int index);
@@ -70,7 +72,7 @@ _mp_stack_peek_double (MpStack* stack, int index);
 EXPORT long double
 _mp_stack_peek_ldouble (MpStack* stack, int index);
 EXPORT void
-_mp_stack_pop (MpStack* stack);
+_mp_stack_pop (MpStack* stack, guint count);
 
 #if __cplusplus
 }

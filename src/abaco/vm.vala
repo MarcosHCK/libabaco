@@ -18,34 +18,23 @@
 
 namespace Abaco
 {
-  public interface Closure
-  {
-    public abstract int invoke (VM vm, int args) throws GLib.Error;
-  }
-
-  public errordomain VMError
-  {
-    FAILED,
-    INDEX,
-    ALREADY,
-    SYNTAX,
-    BYTECODE,
-  }
+  [CCode (has_target = false)]
+  public delegate int CClosure (Abaco.VM vm);
 
   public interface VM
   {
     public abstract void settop (int top);
     public abstract int gettop ();
-    public abstract void pushvalue (int index) throws GLib.Error;
-    public abstract void pushupvalue (int index) throws GLib.Error;
+    public abstract void pushvalue (int index);
+    public abstract void pushupvalue (int index);
     public abstract void pop ();
     public abstract void insert (int index);
     public abstract void remove (int index);
-    public abstract void pushclosure (Closure closure, int upvalues) throws GLib.Error;
+    public abstract void pushcclosure (CClosure closure, int upvalues);
     public abstract bool loadbytes (GLib.Bytes bytes) throws GLib.Error;
     public abstract bool loadstring (string code) throws GLib.Error;
-    public abstract int call (int args) throws GLib.Error;
-    public abstract void register_operator (string expr) throws GLib.Error;
-    public abstract void register_function (string expr) throws GLib.Error;
+    public abstract int call (int args);
+    public abstract void register_operator (string expr);
+    public abstract void register_function (string expr);
   }
 }

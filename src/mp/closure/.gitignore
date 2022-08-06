@@ -33,4 +33,5 @@ libclosure*.dylib*
 closure.vapi
 closure.h
 
+cclosure.c
 closure.c

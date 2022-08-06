@@ -64,7 +64,7 @@ _mp_stack_notify (gpointer pvalue)
   switch (value->type)
   {
   case MP_TYPE_VALUE:
-      g_value_unset (& value->value);
+    g_value_unset (& value->value);
     break;
   case MP_TYPE_INTEGER:
     mpz_clear (value->integer);
@@ -158,6 +158,15 @@ _mp_stack_transfer (MpStack* dst, MpStack* src)
 }
 
 void
+_mp_stack_push_nil (MpStack* stack)
+{
+  g_return_if_fail (stack != NULL);
+  GArray* array = (gpointer) stack;
+  MpValue mp = { .type = MP_TYPE_NIL };
+  g_array_append_val (array, mp);
+}
+
+void
 _mp_stack_push_index (MpStack* stack, int index)
 {
   g_return_if_fail (stack != NULL);
@@ -165,10 +174,13 @@ _mp_stack_push_index (MpStack* stack, int index)
 
   g_return_if_fail (index >= 0 && stack->length > index);
   MpValue* pmp = & stack->values [index];
-  MpValue mp;
+  MpValue mp = {0};
 
   switch (pmp->type)
   {
+  case MP_TYPE_NIL:
+    g_array_append_vals (array, pmp, 1);
+    break;
   case MP_TYPE_VALUE:
     mp.type = MP_TYPE_VALUE;
     g_value_init (& mp.value, G_VALUE_TYPE (&pmp->value));
@@ -195,10 +207,6 @@ _mp_stack_push_index (MpStack* stack, int index)
       mpfr_init_set (mp.real, pmp->real, mode);
       g_array_append_val (array, mp);
     }
-    break;
-  case MP_TYPE_NIL:
-    g_error ("Fix this!");
-    g_assert_not_reached ();
     break;
   default:
     g_warning ("Can't copy this value");
@@ -241,7 +249,7 @@ _mp_stack_push_value (MpStack* stack, const GValue* value)
   g_return_if_fail (stack != NULL);
   g_return_if_fail (G_IS_VALUE (value));
   GArray* array = (gpointer) stack;
-  MpValue mp;
+  MpValue mp = {0};
 
   mp.type = MP_TYPE_VALUE;
   g_value_init (& mp.value, G_VALUE_TYPE (value));
@@ -397,8 +405,16 @@ _mp_stack_peek_value (MpStack* stack, int index, GValue* value)
   MpValue* pmp = & stack->values [index];
   GArray* array = (gpointer) stack;
 
-  g_value_init (value, G_VALUE_TYPE (& pmp->value));
-  g_value_copy (& pmp->value, value);
+  switch (pmp->type)
+  {
+  case MP_TYPE_VALUE:
+    g_value_init (value, G_VALUE_TYPE (& pmp->value));
+    g_value_copy (& pmp->value, value);
+    break;
+  default:
+    g_warning ("Can't cast to value");
+    break;
+  }
 }
 
 gchar*
@@ -418,7 +434,6 @@ _mp_stack_peek_string (MpStack* stack, int index, int base)
     length = 2;
     length += mpz_sizeinbase (pmp->integer, base);
     result = mpz_get_str (g_malloc (length), base, pmp->integer);
-    _mp_stack_pop (stack);
     break;
   case MP_TYPE_RATIONAL:
     length = 3;
@@ -550,14 +565,14 @@ return result;
 }
 
 void
-_mp_stack_pop (MpStack* stack)
+_mp_stack_pop (MpStack* stack, guint count)
 {
   g_return_if_fail (stack != NULL);
   GArray* array = (gpointer) stack;
 
-  if (stack->length > 0)
+  if (stack->length >= count)
   {
-    guint last = stack->length - 1;
-    g_array_remove_index (array, last);
+    guint leave = stack->length - count;
+    g_array_set_size (array, leave);
   }
 }
