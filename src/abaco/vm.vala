@@ -20,96 +20,32 @@ namespace Abaco
 {
   public interface Closure
   {
-    public virtual int invoke (VM vm, int args) throws GLib.Error
-    {
-      warning ("%s::invoke not implemented for '%s'",
-        typeof (Closure).name (), GLib.Type.from_instance (this).name ());
-      return -1;
-    }
+    public abstract int invoke (VM vm, int args) throws GLib.Error;
+  }
+
+  public errordomain VMError
+  {
+    FAILED,
+    INDEX,
+    ALREADY,
+    SYNTAX,
+    BYTECODE,
   }
 
   public interface VM
   {
-    public virtual int call (int args) throws GLib.Error
-    {
-      warning ("%s::call not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-      return -1;
-    }
-
-    public virtual void settop (int top)
-    {
-      warning ("%s::settop not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-    }
-
-    public virtual int gettop ()
-    {
-      warning ("%s::gettop not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-      return -1;
-    }
-
-    public virtual void pushvalue (int index) throws GLib.Error
-    {
-      warning ("%s::pushvalue not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-    }
-
-    public virtual void pushupvalue (int index) throws GLib.Error
-    {
-      warning ("%s::pushupvalue not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-    }
-
-    public virtual void pop ()
-    {
-      warning ("%s::pop not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-    }
-
-    public virtual void insert (int index)
-    {
-      warning ("%s::insert not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-    }
-
-    public virtual void remove (int index)
-    {
-      warning ("%s::remove not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-    }
-
-    public virtual void pushclosure (Closure closure, int upvalues) throws GLib.Error
-    {
-      warning ("%s::pushclosure not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-    }
-
-    public virtual bool loadbytes (GLib.Bytes bytes) throws GLib.Error
-    {
-      warning ("%s::loadbytes not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-      return false;
-    }
-
-    public bool loadstring (string code) throws GLib.Error
-    {
-      var bytes = new GLib.Bytes (code.data);
-      var result = loadbytes (bytes);
-    return result;
-    }
-
-    public virtual void register_operator (string expr) throws GLib.Error
-    {
-      warning ("%s::register_operator not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-    }
-
-    public virtual void register_function (string expr) throws GLib.Error
-    {
-      warning ("%s::register_function not implemented for '%s'",
-        typeof (VM).name (), GLib.Type.from_instance (this).name ());
-    }
+    public abstract void settop (int top);
+    public abstract int gettop ();
+    public abstract void pushvalue (int index) throws GLib.Error;
+    public abstract void pushupvalue (int index) throws GLib.Error;
+    public abstract void pop ();
+    public abstract void insert (int index);
+    public abstract void remove (int index);
+    public abstract void pushclosure (Closure closure, int upvalues) throws GLib.Error;
+    public abstract bool loadbytes (GLib.Bytes bytes) throws GLib.Error;
+    public abstract bool loadstring (string code) throws GLib.Error;
+    public abstract int call (int args) throws GLib.Error;
+    public abstract void register_operator (string expr) throws GLib.Error;
+    public abstract void register_function (string expr) throws GLib.Error;
   }
 }
