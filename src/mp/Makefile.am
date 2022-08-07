@@ -50,10 +50,12 @@ pkginclude_HEADERS=\
 #
 
 EXTRA_DIST+=\
+	internal.h \
 	value.h \
 	$(VOID)
 
 libabaco_mp_la_SOURCES=\
+	arith.c \
 	value.c \
 	vm.c \
 	$(VOID)

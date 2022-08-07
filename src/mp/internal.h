@@ -15,23 +15,36 @@
  * along with libabaco.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#ifndef __MP_INTERNAL__
+#define __MP_INTERNAL__ 1
+#ifndef __LIBABACO_MP_INSIDE__
+# error "This is a private header"
+#endif // __LIBABACO_MP_INSIDE__
+#include <libabaco_mp.h>
+#include <value.h>
 
-[CCode (cprefix = "Mp", lower_case_cprefix = "_mp_")]
-namespace Mp
-{
-  public class CClosure : Closure
-  {
-    private Abaco.CClosure callback;
-    public override int invoke (Abaco.MP vm)
-    {
-      return callback (vm);
-    }
+#if __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-    [CCode (type = "MpClosure*")]
-    public CClosure (Stack? stack, int upvalues, owned Abaco.CClosure callback)
-    {
-      base (stack, upvalues);
-      this.callback = callback;
-    }
-  }
+G_GNUC_INTERNAL
+gint
+_abaco_mp_checkindex (AbacoMP* self, gint index);
+G_GNUC_INTERNAL
+gpointer
+_abaco_mp_toobject (AbacoMP* self, gint index);
+G_GNUC_INTERNAL
+void
+_abaco_mp_new_integer (AbacoMP* self);
+G_GNUC_INTERNAL
+void
+_abaco_mp_new_rational (AbacoMP* self);
+G_GNUC_INTERNAL
+void
+_abaco_mp_new_real (AbacoMP* self);
+
+#if __cplusplus
 }
+#endif // __cplusplus
+
+#endif // __MP_INTERNAL__

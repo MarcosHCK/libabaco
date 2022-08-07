@@ -19,7 +19,6 @@
 #include <glib-object.h>
 #include <value.h>
 
-typedef struct _MpPointerValue MpPointerValue;
 typedef struct _MpValue MpValue;
 
 typedef enum
@@ -158,15 +157,6 @@ _mp_stack_transfer (MpStack* dst, MpStack* src)
 }
 
 void
-_mp_stack_push_nil (MpStack* stack)
-{
-  g_return_if_fail (stack != NULL);
-  GArray* array = (gpointer) stack;
-  MpValue mp = { .type = MP_TYPE_NIL };
-  g_array_append_val (array, mp);
-}
-
-void
 _mp_stack_push_index (MpStack* stack, int index)
 {
   g_return_if_fail (stack != NULL);
@@ -241,6 +231,45 @@ _mp_stack_remove (MpStack* stack, int index)
 
   g_return_if_fail (index >= 0 && stack->length > index);
   g_array_remove_index (array, index);
+}
+
+void
+_mp_stack_new_integer (MpStack* stack)
+{
+  g_return_if_fail (stack != NULL);
+  GArray* array = (gpointer) stack;
+  MpValue mp = { .type = MP_TYPE_INTEGER };
+  mpz_init (mp.integer);
+  g_array_append_val (array, mp);
+}
+
+void
+_mp_stack_new_rational (MpStack* stack)
+{
+  g_return_if_fail (stack != NULL);
+  GArray* array = (gpointer) stack;
+  MpValue mp = { .type = MP_TYPE_RATIONAL };
+  mpq_init (mp.rational);
+  g_array_append_val (array, mp);
+}
+
+void
+_mp_stack_new_real (MpStack* stack)
+{
+  g_return_if_fail (stack != NULL);
+  GArray* array = (gpointer) stack;
+  MpValue mp = { .type = MP_TYPE_REAL };
+  mpfr_init (mp.real);
+  g_array_append_val (array, mp);
+}
+
+void
+_mp_stack_push_nil (MpStack* stack)
+{
+  g_return_if_fail (stack != NULL);
+  GArray* array = (gpointer) stack;
+  MpValue mp = { .type = MP_TYPE_NIL };
+  g_array_append_val (array, mp);
 }
 
 void
@@ -395,6 +424,15 @@ _mp_stack_push_ldouble (MpStack* stack, long double value)
   mode = mpfr_get_default_rounding_mode ();
   mpfr_init_set_ld (mp.real, value, mode);
   g_array_append_val (array, mp);
+}
+
+gpointer
+_mp_stack_peek (MpStack* stack, int index)
+{
+  g_return_if_fail (stack != NULL);
+  g_return_if_fail (index >= 0 && stack->length > index);
+  MpValue* pmp = & stack->values [index];
+return (gpointer) & pmp->integer;
 }
 
 void

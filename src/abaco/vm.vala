@@ -41,7 +41,7 @@ namespace Abaco
     }
 
     public abstract int call (int args);
-    public abstract void register_operator (string expr);
+    public abstract void register_operator (string expr, bool assoc, int precedence, bool unary);
     public abstract void register_function (string expr);
   }
 }

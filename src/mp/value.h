@@ -48,13 +48,19 @@ _mp_stack_type (MpStack* stack, int index);
 EXPORT void
 _mp_stack_transfer (MpStack* dst, MpStack* src);
 EXPORT void
-_mp_stack_push_nil (MpStack* stack);
-EXPORT void
 _mp_stack_push_index (MpStack* stack, int index);
 EXPORT void
 _mp_stack_insert (MpStack* stack, int index);
 EXPORT void
 _mp_stack_remove (MpStack* stack, int index);
+EXPORT void
+_mp_stack_new_integer (MpStack* stack);
+EXPORT void
+_mp_stack_new_rational (MpStack* stack);
+EXPORT void
+_mp_stack_new_real (MpStack* stack);
+EXPORT void
+_mp_stack_push_nil (MpStack* stack);
 EXPORT void
 _mp_stack_push_value (MpStack* stack, const GValue* value);
 EXPORT gboolean
@@ -63,6 +69,8 @@ EXPORT void
 _mp_stack_push_double (MpStack* stack, double value);
 EXPORT void
 _mp_stack_push_ldouble (MpStack* stack, long double value);
+EXPORT gpointer
+_mp_stack_peek (MpStack* stack, int index);
 EXPORT void
 _mp_stack_peek_value (MpStack* stack, int index, GValue* value);
 EXPORT gchar*
@@ -78,4 +86,5 @@ _mp_stack_pop (MpStack* stack, guint count);
 }
 #endif // __cplusplus
 
+#undef EXPORT
 #endif // __MP_VALUE__

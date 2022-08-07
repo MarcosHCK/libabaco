@@ -44,10 +44,16 @@ namespace Mp
     {
       if (unlikely (upvalues < 0))
         error ("Upvalue number most be no negative");
-      if (unlikely (upvalues > 0 && src == null))
-        error ("Upvalues needs a source stack");
-      if (unlikely (upvalues > src.get_length ()))
-        error ("Can't push more upvalues than values");
+      if (unlikely (upvalues > 0))
+      {
+        if (unlikely (src == null))
+          error ("Upvalues needs a source stack");
+        else
+        if (unlikely (upvalues > src.get_length ()))
+        {
+          error ("Can't push more upvalues than values");
+        }
+      }
 
       stack = new Mp.Stack ();
       for (int i = 0; i < upvalues; i++)

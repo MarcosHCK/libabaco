@@ -44,10 +44,41 @@ typedef struct _AbacoMP AbacoMP;
 extern "C" {
 #endif // __cplusplus
 
+#define abaco_mp_isinteger(mp,index) \
+  (G_GNUC_EXTENSION ({ \
+    AbacoMP* __self = (mp); \
+    gint __index = (index); \
+    abaco_mp_typename (__self, __index) == MP_TYPE_INTEGER; \
+  }))
+#define abaco_mp_isrational(mp,index) \
+  (G_GNUC_EXTENSION ({ \
+    AbacoMP* __self = (mp); \
+    gint __index = (index); \
+    abaco_mp_typename (__self, __index) == MP_TYPE_RATIONAL; \
+  }))
+#define abaco_mp_isreal(mp,index) \
+  (G_GNUC_EXTENSION ({ \
+    AbacoMP* __self = (mp); \
+    gint __index = (index); \
+    abaco_mp_typename (__self, __index) == MP_TYPE_REAL; \
+  }))
+#define abaco_mp_isnumber(mp,index) \
+  (G_GNUC_EXTENSION ({ \
+    AbacoMP* __self = (mp); \
+    gint __index = (index); \
+    abaco_mp_isinteger (__self, __index) || \
+    abaco_mp_isrational (__self, __index) || \
+    abaco_mp_isreal (__self, __index); \
+  }))
+
 VALA_EXTERN GType
 abaco_mp_get_type (void) G_GNUC_CONST;
 VALA_EXTERN AbacoVM*
 abaco_mp_new (void);
+VALA_EXTERN AbacoVM*
+abaco_mp_new_naked (void);
+VALA_EXTERN void
+abaco_mp_load_stdlib (AbacoMP* self);
 VALA_EXTERN const gchar*
 abaco_mp_typename (AbacoMP* self, gint index);
 VALA_EXTERN void
@@ -62,6 +93,20 @@ VALA_EXTERN long double
 abaco_mp_toldouble (AbacoMP* self, gint index);
 VALA_EXTERN gchar*
 abaco_mp_tostring (AbacoMP* self, gint index, int base);
+
+/*
+ * Library
+ *
+ */
+
+VALA_EXTERN int
+abaco_mp_arith_add (AbacoVM* vm);
+VALA_EXTERN int
+abaco_mp_arith_sub (AbacoVM* vm);
+VALA_EXTERN int
+abaco_mp_arith_mul (AbacoVM* vm);
+VALA_EXTERN int
+abaco_mp_arith_div (AbacoVM* vm);
 
 #if __cplusplus
 }
