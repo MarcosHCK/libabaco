@@ -40,6 +40,7 @@ noinst_LTLIBRARIES=\
 libclosure_la_SOURCES=\
 	cclosure.vala \
 	closure.vala \
+	function.vala \
 	$(VOID)
 libclosure_la_CFLAGS=\
 	$(ABACO_CFLAGS) \

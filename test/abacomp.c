@@ -66,6 +66,23 @@ dotest (AbacoVM* vm, AbacoMP* mp)
   abaco_mp_pushdouble (mp, 91);
   abaco_vm_call (vm, 1);
   abaco_vm_settop (vm, 0);
+
+  GError* tmp_err = NULL;
+  abaco_vm_loadstring (vm, "(8+3)*2", &tmp_err);
+  if (G_UNLIKELY (tmp_err != NULL))
+  {
+    g_critical
+    ("(%s): %s: %i: %s",
+     G_STRLOC,
+     g_quark_to_string
+     (tmp_err->domain),
+     tmp_err->code,
+     tmp_err->message);
+    g_error_free (tmp_err);
+    g_assert_not_reached ();
+  }
+
+  abaco_vm_call (vm, 0);
 }
 
 int

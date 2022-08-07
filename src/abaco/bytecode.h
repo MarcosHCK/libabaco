@@ -40,6 +40,17 @@ struct _BSection
 } PACKED;
 
 #define B_SECTION_ALIGN (8)
+#define B_HEADER_MAGIC "ABC"
+
+#define b_header_check_magic(header) \
+  (G_GNUC_EXTENSION ({ \
+    BHeader* __header = (header); \
+    const gchar* __magic = (B_HEADER_MAGIC); \
+    __header->magic [0] == __magic [0] && \
+    __header->magic [1] == __magic [1] && \
+    __header->magic [2] == __magic [2] && \
+    __header->magic [3] == __magic [3]; \
+  }))
 
 typedef enum
 {

@@ -40,10 +40,12 @@ namespace Mp
 
     /* constructors */
 
-    protected Closure (Stack src, int upvalues)
+    protected Closure (Stack? src, int upvalues)
     {
       if (unlikely (upvalues < 0))
         error ("Upvalue number most be no negative");
+      if (unlikely (upvalues > 0 && src == null))
+        error ("Upvalues needs a source stack");
       if (unlikely (upvalues > src.get_length ()))
         error ("Can't push more upvalues than values");
 

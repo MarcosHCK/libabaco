@@ -35,3 +35,4 @@ closure.h
 
 cclosure.c
 closure.c
+function.c

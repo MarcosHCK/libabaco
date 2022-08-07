@@ -15,13 +15,21 @@
  * along with libabaco.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#include <config.h>
-#include <bytecode.h>
-#include <glib.h>
 
-G_STATIC_ASSERT (sizeof (BHeader) == sizeof (guint64));
-G_STATIC_ASSERT (sizeof (BSection) == sizeof (guint64));
-G_STATIC_ASSERT (sizeof (BSection) % B_SECTION_ALIGN == 0);
-G_STATIC_ASSERT (sizeof (BOpcode) == sizeof (guint32));
-G_STATIC_ASSERT (((1 << 6) - 1) >= B_OPCODE_MAXOPCODE);
-G_STATIC_ASSERT (sizeof (B_HEADER_MAGIC) == 4);
+[CCode (cprefix = "Mp", lower_case_cprefix = "_mp_")]
+namespace Mp
+{
+  public class Function : Closure
+  {
+    public override int invoke (Abaco.MP vm)
+    {
+      return 0;
+    }
+
+    [CCode (type = "MpClosure*")]
+    public Function (GLib.Bytes code)
+    {
+      base (null, 0);
+    }
+  }
+}

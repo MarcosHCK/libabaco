@@ -16,6 +16,7 @@
  *
  */
 #include <config.h>
+#include <bytecode.h>
 #include <closure.h>
 #include <libabaco_mp.h>
 #include <value.h>
@@ -27,12 +28,17 @@ abaco_mp_abaco_vm_iface (AbacoVMIface* iface);
 #define ABACO_IS_MP_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), ABACO_TYPE_MP))
 #define ABACO_MP_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), ABACO_TYPE_MP, AbacoMPClass))
 typedef struct _AbacoMPClass AbacoMPClass;
+#define _abaco_ast_node_unref0(var) ((var == NULL) ? NULL : (var = (abaco_ast_node_unref (var), NULL)))
+#define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
+#define _g_bytes_unref0(var) ((var == NULL) ? NULL : (var = (g_bytes_unref (var), NULL)))
 
 struct _AbacoMP
 {
   GObject parent;
 
   /*<private>*/
+  AbacoAssembler* assembler;
+  AbacoRules* rules;
   MpStack* stack;
   guint top;
 };
@@ -214,6 +220,50 @@ abaco_mp_abaco_vm_iface_pushcclosure (AbacoVM* pself, AbacoCClosure callback, gi
   g_value_unset (&value);
 }
 
+static gboolean
+abaco_mp_abaco_vm_iface_loadbytes (AbacoVM* pself, GBytes* bytes, GError** error)
+{
+  AbacoMP* self = ABACO_MP (pself);
+  const gchar* input = NULL;
+  BHeader* header = NULL;
+  gsize length = 0;
+
+  input = g_bytes_get_data (bytes, &length);
+  header = (BHeader*) input;
+
+  if (!b_header_check_magic (header))
+  {
+    AbacoAstNode* tree = NULL;
+    GError* tmp_err = NULL;
+
+    tree =
+    abaco_rules_parse (self->rules, input, length, &tmp_err);
+    if (G_UNLIKELY (tmp_err != NULL))
+    {
+      g_propagate_error (error, tmp_err);
+      _abaco_ast_node_unref0 (tree);
+      return FALSE;
+    }
+
+    bytes =
+    abaco_assembler_assemble (self->assembler, tree, &tmp_err);
+    _abaco_ast_node_unref0 (tree);
+    if (G_UNLIKELY (tmp_err != NULL))
+    {
+      g_propagate_error (error, tmp_err);
+      _g_bytes_unref0 (bytes);
+      return FALSE;
+    }
+
+    g_assert_not_reached ();
+  }
+  else
+  {
+    g_assert_not_reached ();
+  }
+return TRUE;
+}
+
 static gint
 abaco_mp_abaco_vm_iface_call (AbacoVM* pself, gint args)
 {
@@ -274,6 +324,7 @@ abaco_mp_abaco_vm_iface (AbacoVMIface* iface)
   iface->insert = abaco_mp_abaco_vm_iface_insert;
   iface->remove = abaco_mp_abaco_vm_iface_remove;
   iface->pushcclosure = abaco_mp_abaco_vm_iface_pushcclosure;
+  iface->loadbytes = abaco_mp_abaco_vm_iface_loadbytes;
   iface->call = abaco_mp_abaco_vm_iface_call;
 }
 
@@ -319,6 +370,8 @@ static void
 abaco_mp_class_dispose (GObject* pself)
 {
   AbacoMP* self = ABACO_MP (pself);
+  _g_object_unref0 (self->assembler);
+  _g_object_unref0 (self->rules);
 G_OBJECT_CLASS (abaco_mp_parent_class)->dispose (pself);
 }
 
@@ -340,6 +393,8 @@ abaco_mp_class_init (AbacoMPClass* klass)
 static void
 abaco_mp_init (AbacoMP* self)
 {
+  self->assembler = abaco_assembler_new ();
+  self->rules = abaco_rules_new ();
   self->stack = _mp_stack_new ();
 }
 
