@@ -44,27 +44,21 @@ typedef struct _AbacoMP AbacoMP;
 extern "C" {
 #endif // __cplusplus
 
-#define abaco_mp_isinteger(mp,index) \
+#define abaco_mp_isinteger(self,index) \
   (G_GNUC_EXTENSION ({ \
-    AbacoMP* __self = (mp); \
-    gint __index = (index); \
-    abaco_mp_typename (__self, __index) == MP_TYPE_INTEGER; \
+    abaco_mp_typename ((self), (index)) == MP_TYPE_INTEGER; \
   }))
-#define abaco_mp_isrational(mp,index) \
+#define abaco_mp_isrational(self,index) \
   (G_GNUC_EXTENSION ({ \
-    AbacoMP* __self = (mp); \
-    gint __index = (index); \
-    abaco_mp_typename (__self, __index) == MP_TYPE_RATIONAL; \
+    abaco_mp_typename ((self), (index)) == MP_TYPE_RATIONAL; \
   }))
-#define abaco_mp_isreal(mp,index) \
+#define abaco_mp_isreal(self,index) \
   (G_GNUC_EXTENSION ({ \
-    AbacoMP* __self = (mp); \
-    gint __index = (index); \
-    abaco_mp_typename (__self, __index) == MP_TYPE_REAL; \
+    abaco_mp_typename ((self), (index)) == MP_TYPE_REAL; \
   }))
-#define abaco_mp_isnumber(mp,index) \
+#define abaco_mp_isnumber(self,index) \
   (G_GNUC_EXTENSION ({ \
-    AbacoMP* __self = (mp); \
+    AbacoMP* __self = (self); \
     gint __index = (index); \
     abaco_mp_isinteger (__self, __index) || \
     abaco_mp_isrational (__self, __index) || \

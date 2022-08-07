@@ -374,13 +374,11 @@ main (int argc, char* argv [])
       AbacoRules* rules = NULL;
       AbacoAssembler* assembler = NULL;
       AbacoAstNode* ast = NULL;
-      AbacoVM* vm = NULL;
       GBytes* code = NULL;
       int i;
 
       rules = abaco_rules_new ();
       assembler = abaco_assembler_new ();
-      vm = abaco_mp_new ();
 
       abaco_rules_add_operator (rules, "[\\+]", FALSE, 2, FALSE, &tmp_err);
         g_assert_no_error (tmp_err);
@@ -470,7 +468,6 @@ main (int argc, char* argv [])
 
       g_object_unref (assembler);
       g_object_unref (rules);
-      g_object_unref (vm);
     }
 return 0;
 }

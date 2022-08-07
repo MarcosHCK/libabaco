@@ -56,6 +56,7 @@ EXTRA_DIST+=\
 
 libabaco_mp_la_SOURCES=\
 	arith.c \
+	execute.c \
 	value.c \
 	vm.c \
 	$(VOID)

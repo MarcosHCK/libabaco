@@ -23,28 +23,32 @@
 #include <libabaco_mp.h>
 #include <value.h>
 
+#define EXPORT G_GNUC_INTERNAL
+
 #if __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-G_GNUC_INTERNAL
-gint
-_abaco_mp_checkindex (AbacoMP* self, gint index);
-G_GNUC_INTERNAL
-gpointer
+EXPORT gpointer
 _abaco_mp_toobject (AbacoMP* self, gint index);
-G_GNUC_INTERNAL
-void
+EXPORT void
+_abaco_mp_transfer_to (AbacoMP* self, MpStack* dst);
+EXPORT void
+_abaco_mp_transfer_from (AbacoMP* self, MpStack* src);
+EXPORT void
 _abaco_mp_new_integer (AbacoMP* self);
-G_GNUC_INTERNAL
-void
+EXPORT void
 _abaco_mp_new_rational (AbacoMP* self);
-G_GNUC_INTERNAL
-void
+EXPORT void
 _abaco_mp_new_real (AbacoMP* self);
+EXPORT const gchar*
+_abaco_mp_lookup_constant (AbacoMP* self, const gchar* key);
+EXPORT gpointer
+_abaco_mp_lookup_function (AbacoMP* self, const gchar* key);
 
 #if __cplusplus
 }
 #endif // __cplusplus
 
+#undef EXPORT
 #endif // __MP_INTERNAL__

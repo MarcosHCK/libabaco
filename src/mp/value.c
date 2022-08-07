@@ -205,6 +205,27 @@ _mp_stack_push_index (MpStack* stack, int index)
 }
 
 void
+_mp_stack_exchange (MpStack* stack, int index)
+{
+  g_return_if_fail (stack != NULL);
+  GArray* array = (gpointer) stack;
+
+  g_return_if_fail (index >= 0);
+  g_return_if_fail (stack->length > index);
+
+  if (stack->length > 0)
+  {
+    guint last = stack->length - 1;
+    MpValue* pmp1 = & stack->values [last];
+    MpValue* pmp2 = & stack->values [index];
+    MpValue tmp = *pmp1;
+
+    *pmp1 = *pmp2;
+    *pmp2 = tmp;
+  }
+}
+
+void
 _mp_stack_insert (MpStack* stack, int index)
 {
   g_return_if_fail (stack != NULL);

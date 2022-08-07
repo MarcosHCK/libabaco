@@ -50,6 +50,8 @@ _mp_stack_transfer (MpStack* dst, MpStack* src);
 EXPORT void
 _mp_stack_push_index (MpStack* stack, int index);
 EXPORT void
+_mp_stack_exchange (MpStack* stack, int index);
+EXPORT void
 _mp_stack_insert (MpStack* stack, int index);
 EXPORT void
 _mp_stack_remove (MpStack* stack, int index);

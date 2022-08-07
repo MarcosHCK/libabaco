@@ -38,7 +38,8 @@ struct _AbacoMP
   /*<private>*/
   AbacoAssembler* assembler;
   AbacoRules* rules;
-  GHashTable* registry;
+  GHashTable* constants;
+  GHashTable* functions;
   MpStack* stack;
   guint top;
 };
@@ -109,14 +110,6 @@ return -1;
 
 /* internal API */
 
-G_GNUC_INTERNAL
-gint
-_abaco_mp_checkindex (AbacoMP* self, gint index)
-{
-  return (validate_index) (self, index);
-}
-
-G_GNUC_INTERNAL
 gpointer
 _abaco_mp_toobject (AbacoMP* self, gint index)
 {
@@ -125,25 +118,60 @@ _abaco_mp_toobject (AbacoMP* self, gint index)
 return _mp_stack_peek (self->stack, index);
 }
 
-G_GNUC_INTERNAL
+void
+_abaco_mp_transfer_to (AbacoMP* self, MpStack* dst)
+{
+  if (gettop () == 0)
+    g_error ("Empty stack");
+  _mp_stack_transfer (dst, self->stack);
+}
+
+void
+_abaco_mp_transfer_from (AbacoMP* self, MpStack* src)
+{
+  _mp_stack_transfer (self->stack, src);
+}
+
 void
 _abaco_mp_new_integer (AbacoMP* self)
 {
   _mp_stack_new_integer (self->stack);
 }
 
-G_GNUC_INTERNAL
 void
 _abaco_mp_new_rational (AbacoMP* self)
 {
   _mp_stack_new_rational (self->stack);
 }
 
-G_GNUC_INTERNAL
 void
 _abaco_mp_new_real (AbacoMP* self)
 {
   _mp_stack_new_real (self->stack);
+}
+
+const gchar*
+_abaco_mp_lookup_constant (AbacoMP* self, const gchar* key)
+{
+  const gchar* value = NULL;
+  if (g_hash_table_lookup_extended
+    (self->constants,
+     key, NULL,
+     (gpointer*) &value))
+    return value;
+return NULL;
+}
+
+gpointer
+_abaco_mp_lookup_function (AbacoMP* self, const gchar* key)
+{
+  MpClosure* value = NULL;
+  if (g_hash_table_lookup_extended
+    (self->functions,
+     key, NULL,
+     (gpointer*) &value))
+    return value;
+return NULL;
 }
 
 /* Abaco.VM */
@@ -264,6 +292,8 @@ abaco_mp_abaco_vm_iface_loadbytes (AbacoVM* pself, GBytes* bytes, GError** error
 {
   AbacoMP* self = ABACO_MP (pself);
   const gchar* input = NULL;
+  GValue value = G_VALUE_INIT;
+  MpClosure* closure = NULL;
   BHeader* header = NULL;
   gsize length = 0;
 
@@ -294,11 +324,28 @@ abaco_mp_abaco_vm_iface_loadbytes (AbacoVM* pself, GBytes* bytes, GError** error
       return FALSE;
     }
 
-    g_assert_not_reached ();
+    closure =
+    _mp_function_new (bytes);
+    g_bytes_unref (bytes);
+
+    g_value_init (&value, _MP_TYPE_FUNCTION);
+    _mp_value_take_closure (&value, closure);
+    _mp_stack_push_value (self->stack, &value);
+    g_value_unset (&value);
   }
   else
   {
-    g_assert_not_reached ();
+    input += sizeof (BHeader);
+    length -= sizeof (BHeader);
+
+    bytes = g_bytes_new_static (input, length);
+    closure = _mp_function_new (bytes);
+    g_bytes_unref (bytes);
+
+    g_value_init (&value, _MP_TYPE_FUNCTION);
+    _mp_value_take_closure (&value, closure);
+    _mp_stack_push_value (self->stack, &value);
+    g_value_unset (&value);
   }
 return TRUE;
 }
@@ -372,7 +419,7 @@ abaco_mp_abaco_vm_iface_register_operator (AbacoVM* pself, const gchar* expr, gb
     g_value_unset (&value);
 
     abaco_rules_add_operator (self->rules, expr, assoc, precedence, unary, &tmp_err);
-    g_hash_table_insert (self->registry, g_strdup (expr), closure);
+    g_hash_table_insert (self->functions, g_strdup (expr), closure);
     if (G_UNLIKELY (tmp_err != NULL))
     {
       g_error
@@ -410,7 +457,7 @@ abaco_mp_abaco_vm_iface_register_function (AbacoVM* pself, const gchar* expr)
     g_value_unset (&value);
 
     abaco_rules_add_function (self->rules, expr, -1, &tmp_err);
-    g_hash_table_insert (self->registry, g_strdup (expr), closure);
+    g_hash_table_insert (self->functions, g_strdup (expr), closure);
     if (G_UNLIKELY (tmp_err != NULL))
     {
       g_error
@@ -479,7 +526,8 @@ abaco_mp_class_finalize (GObject* pself)
 {
   AbacoMP* self = ABACO_MP (pself);
   _mp_stack_unref (self->stack);
-  g_hash_table_unref (self->registry);
+  g_hash_table_unref (self->constants);
+  g_hash_table_unref (self->functions);
 G_OBJECT_CLASS (abaco_mp_parent_class)->finalize (pself);
 }
 
@@ -489,7 +537,8 @@ abaco_mp_class_dispose (GObject* pself)
   AbacoMP* self = ABACO_MP (pself);
   _g_object_unref0 (self->assembler);
   _g_object_unref0 (self->rules);
-  g_hash_table_remove_all (self->registry);
+  g_hash_table_remove_all (self->constants);
+  g_hash_table_remove_all (self->functions);
 G_OBJECT_CLASS (abaco_mp_parent_class)->dispose (pself);
 }
 
@@ -513,7 +562,8 @@ abaco_mp_init (AbacoMP* self)
 {
   self->assembler = abaco_assembler_new ();
   self->rules = abaco_rules_new ();
-  self->registry = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, _mp_closure_unref);
+  self->constants = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
+  self->functions = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, _mp_closure_unref);
   self->stack = _mp_stack_new ();
 }
 
@@ -540,7 +590,7 @@ abaco_mp_load_stdlib (AbacoMP* self)
 {
   g_return_if_fail (ABACO_IS_MP (self));
   AbacoRules* rules = (self->rules);
-  GHashTable* reg = (self->registry);
+  GHashTable* reg = (self->functions);
   MpClosure* closure = NULL;
   GError* tmp_err = NULL;
 
@@ -552,17 +602,17 @@ abaco_mp_load_stdlib (AbacoMP* self)
   abaco_rules_add_operator (rules, "[\\-]", FALSE, 2, FALSE, &tmp_err);
     g_assert_no_error (tmp_err);
   closure = _mp_cclosure_new (NULL, 0, abaco_mp_arith_sub);
-  g_hash_table_insert (reg, g_strdup ("+"), closure);
+  g_hash_table_insert (reg, g_strdup ("-"), closure);
 
   abaco_rules_add_operator (rules, "[\\*]", FALSE, 3, FALSE, &tmp_err);
     g_assert_no_error (tmp_err);
   closure = _mp_cclosure_new (NULL, 0, abaco_mp_arith_mul);
-  g_hash_table_insert (reg, g_strdup ("+"), closure);
+  g_hash_table_insert (reg, g_strdup ("*"), closure);
 
   abaco_rules_add_operator (rules, "[\\/]", FALSE, 3, FALSE, &tmp_err);
     g_assert_no_error (tmp_err);
   closure = _mp_cclosure_new (NULL, 0, abaco_mp_arith_div);
-  g_hash_table_insert (reg, g_strdup ("+"), closure);
+  g_hash_table_insert (reg, g_strdup ("/"), closure);
 }
 
 #undef catch
@@ -570,8 +620,8 @@ abaco_mp_load_stdlib (AbacoMP* self)
 const gchar*
 abaco_mp_typename (AbacoMP* self, gint index)
 {
-  g_return_val_if_fail (ABACO_IS_MP (self), 0);
-  g_return_val_if_fail ((index = validate_index (index)) >= 0, 0);
+  g_return_val_if_fail (ABACO_IS_MP (self), NULL);
+  g_return_val_if_fail ((index = validate_index (index)) >= 0, NULL);
 return _mp_stack_type (self->stack, index);
 }
 

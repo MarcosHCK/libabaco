@@ -18,8 +18,10 @@
 
 namespace Abaco
 {
-  [CCode (cheader_filename = "libabaco_mp.h")]
+  [CCode (cheader_filename = "internal.h")]
   public class MP : GLib.Object, VM
   {
+    [CCode (cname = "_abaco_mp_execute")]
+    public int execute (GLib.Bytes code);
   }
 }

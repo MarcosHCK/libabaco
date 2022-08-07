@@ -21,15 +21,18 @@ namespace Mp
 {
   public class Function : Closure
   {
+    private GLib.Bytes code;
     public override int invoke (Abaco.MP vm)
     {
-      return 0;
+      var result = vm.execute (code);
+      return result;
     }
 
     [CCode (type = "MpClosure*")]
     public Function (GLib.Bytes code)
     {
       base (null, 0);
+      this.code = code;
     }
   }
 }
