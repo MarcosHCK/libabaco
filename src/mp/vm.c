@@ -247,6 +247,17 @@ abaco_mp_abaco_vm_iface_pop (AbacoVM* pself)
 }
 
 static void
+abaco_mp_abaco_vm_iface_exchange (AbacoVM* pself, gint index)
+{
+  AbacoMP* self = ABACO_MP (pself);
+  if ((index = validate_index (index)) < 0)
+    g_error ("Invalid index");
+  if ((validate_index (-1)) < 0)
+    g_error ("Empty stack");
+  _mp_stack_exchange (self->stack, index);
+}
+
+static void
 abaco_mp_abaco_vm_iface_insert (AbacoVM* pself, gint index)
 {
   AbacoMP* self = ABACO_MP (pself);
@@ -482,6 +493,7 @@ abaco_mp_abaco_vm_iface (AbacoVMIface* iface)
   iface->pushvalue = abaco_mp_abaco_vm_iface_pushvalue;
   iface->pushupvalue = abaco_mp_abaco_vm_iface_pushupvalue;
   iface->pop = abaco_mp_abaco_vm_iface_pop;
+  iface->exchange = abaco_mp_abaco_vm_iface_exchange;
   iface->insert = abaco_mp_abaco_vm_iface_insert;
   iface->remove = abaco_mp_abaco_vm_iface_remove;
   iface->pushcclosure = abaco_mp_abaco_vm_iface_pushcclosure;

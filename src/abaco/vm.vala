@@ -28,6 +28,7 @@ namespace Abaco
     public abstract void pushvalue (int index);
     public abstract void pushupvalue (int index);
     public abstract void pop ();
+    public abstract void exchange (int index);
     public abstract void insert (int index);
     public abstract void remove (int index);
     public abstract void pushcclosure (CClosure closure, int upvalues);
