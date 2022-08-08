@@ -375,7 +375,7 @@ main (int argc, char* argv [])
       AbacoAssembler* assembler = NULL;
       AbacoAstNode* ast = NULL;
       GBytes* code = NULL;
-      int i;
+      int i, j, k;
 
       rules = abaco_rules_new ();
       assembler = abaco_assembler_new ();
@@ -443,13 +443,13 @@ main (int argc, char* argv [])
         gdouble last;
         int j;
 
-        for (i = 0; i < reps; i++)
+        for (j = 0; j < reps; j++)
         {
           clock_t start = clock ();
-          for (j = 0; j < tries; j++)
+          for (k = 0; k < tries; k++)
             result = execute (code);
 
-          if (i > 0 && result != last)
+          if (j > 0 && result != last)
             g_error ("Mismatching results for same input");
           last = result;
 

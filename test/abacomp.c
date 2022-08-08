@@ -56,7 +56,7 @@ main (int argc, char* argv [])
     {
       AbacoVM* vm = abaco_mp_new ();
       AbacoMP* mp = ABACO_MP (vm);
-      int i;
+      int i, j, k;
 
       for (i = 1; i < argc; i++)
       {
@@ -79,14 +79,13 @@ main (int argc, char* argv [])
         const gdouble mpt = spt / (gdouble) 1000;
         const int tries = 100000;
         const int reps = 10;
-        gdouble result;
-        gdouble last;
-        int j;
+        gdouble result = -1;
+        gdouble last = -1;
 
-        for (i = 0; i < reps; i++)
+        for (j = 0; j < reps; j++)
         {
           clock_t start = clock ();
-          for (j = 0; j < tries; j++)
+          for (k = 0; k < tries; k++)
           {
             abaco_vm_pushvalue (vm, 0);
             if (abaco_vm_call (vm, 0) > 0)
@@ -95,20 +94,22 @@ main (int argc, char* argv [])
                        abaco_vm_settop (vm, 1);
             }
           }
-
-          if (i > 0 && result != last)
-            g_error ("Mismatching results for same input");
-          last = result;
-
+  
           clock_t stop = clock ();
           gdouble took = (gdouble) (stop - start);
                   took /= (gdouble) tries;
+                  last = result;
+
+          if (j > 0 && result != last)
+            g_error ("Mismatching results for same input");
+
           g_print ("took %lf ticks, %lf micros, %lf secs\r\n",
                     took,
                     took / mpt,
                     took / spt);
         }
 
+        abaco_vm_settop (vm, 0);
         g_print ("result %lf\r\n", result);
       }
     }
