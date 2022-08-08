@@ -183,7 +183,6 @@ g_error ("Incompatible Virtual Machine");
     if (!abaco_mp_isnumber (mp, i))
       g_error ("Bad argument #%i (integer, rational or real expected, got %s)",
         i, abaco_mp_typename (mp, i));
-    g_assert_not_reached ();
 
     if (i == 0)
     {
@@ -196,10 +195,67 @@ g_error ("Incompatible Virtual Machine");
       thistype = abaco_mp_typename (mp, i);
       thisvalue = _abaco_mp_toobject (mp, i);
 
-      if (thistype == lasttype)
+      do
       {
-        if (lasttype == MP_TYPE_INTEGER)
+        if (thistype == lasttype)
         {
+          if (lasttype == MP_TYPE_INTEGER)
+          {
+            gconstpointer new = NULL;
+            _abaco_mp_new_rational (mp);
+            new = _abaco_mp_toobject (mp, -1);
+            mpq_set_z (Q (new), Z (lastvalue));
+            abaco_vm_remove (vm, -2);
+            lasttype = MP_TYPE_RATIONAL;
+            lastvalue = new;
+            continue;
+          } else
+          if (lasttype == MP_TYPE_RATIONAL)
+            mpq_div (Q (lastvalue), Q (lastvalue), Q (thisvalue));
+          else
+          if (lasttype == MP_TYPE_REAL)
+          {
+            mpfr_rnd_t round = 0;
+            round = mpfr_get_default_rounding_mode ();
+            mpfr_div (R (lastvalue), R (lastvalue), R (thisvalue), round);
+          }
+
+          break;
+        }
+        if (lasttype == MP_TYPE_REAL)
+        {
+          mpfr_rnd_t round = 0;
+          round = mpfr_get_default_rounding_mode ();
+
+          if (thistype == MP_TYPE_INTEGER)
+            mpfr_div_z (R (lastvalue), R (lastvalue), Z (thisvalue), round);
+          if (thistype == MP_TYPE_RATIONAL)
+            mpfr_div_q (R (lastvalue), R (lastvalue), Q (thisvalue), round);
+          break;
+        } else
+        if (thistype == MP_TYPE_REAL
+          && (lasttype == MP_TYPE_INTEGER
+            || lasttype == MP_TYPE_RATIONAL))
+        {
+          gconstpointer new = NULL;
+          mpfr_rnd_t round = 0;
+
+          _abaco_mp_new_rational (mp);
+          round = mpfr_get_default_rounding_mode ();
+          new = _abaco_mp_toobject (mp, -1);
+
+          if (lasttype == MP_TYPE_INTEGER)
+            mpfr_set_z (R (new), Z (lastvalue), round);
+          if (lasttype == MP_TYPE_RATIONAL)
+            mpfr_set_q (R (new), Q (lastvalue), round);
+
+          abaco_vm_remove (vm, -2);
+          lasttype = MP_TYPE_REAL;
+          lastvalue = new;
+        } else
+        if (thistype == MP_TYPE_RATIONAL)
+        {
+          g_assert (lasttype == MP_TYPE_INTEGER);
           gconstpointer new = NULL;
           _abaco_mp_new_rational (mp);
           new = _abaco_mp_toobject (mp, -1);
@@ -207,45 +263,25 @@ g_error ("Incompatible Virtual Machine");
           abaco_vm_remove (vm, -2);
           lasttype = MP_TYPE_RATIONAL;
           lastvalue = new;
-          continue;
         } else
         if (lasttype == MP_TYPE_RATIONAL)
-          mpq_div (Q (lasttype), Q (lasttype), Q (thistype));
-        else
-        if (lasttype == MP_TYPE_REAL)
         {
-          mpfr_rnd_t round = 0;
-          round = mpfr_get_default_rounding_mode ();
-          mpfr_div (R (lasttype), R (lasttype), Q (thistype), round);
+          g_assert (thistype == MP_TYPE_INTEGER);
+          mpq_t tmp;
+          mpq_init (tmp);
+          mpq_set_z (tmp, Z (thisvalue));
+          mpq_div (Q (lastvalue), Q (lastvalue), tmp);
+          mpq_clear (tmp);
+          break;
         }
-
-        break;
+        else
+        {
+          g_error ("Fix this!");
+          g_assert_not_reached ();
+        }
       }
-      if (thistype == MP_TYPE_REAL
-        && (lasttype == MP_TYPE_INTEGER
-          || lasttype == MP_TYPE_REAL))
-      {
-        gconstpointer new = NULL;
-        mpfr_rnd_t round = 0;
-
-        _abaco_mp_new_rational (mp);
-        round = mpfr_get_default_rounding_mode ();
-        new = _abaco_mp_toobject (mp, -1);
-
-        if (lasttype == MP_TYPE_INTEGER)
-          mpfr_set_z (R (new), Z (lastvalue), round);
-        if (lasttype == MP_TYPE_RATIONAL)
-          mpfr_set_q (R (new), Q (lastvalue), round);
-
-        abaco_vm_remove (vm, -2);
-        lasttype = MP_TYPE_REAL;
-        lastvalue = new;
-      }
-      else
-      {
-        g_error ("Fix this!");
-        g_assert_not_reached ();
-      }
+      while (TRUE);
     }
   }
+return 1;
 }
