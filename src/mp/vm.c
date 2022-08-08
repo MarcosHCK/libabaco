@@ -637,6 +637,19 @@ abaco_mp_typename (AbacoMP* self, gint index)
 return _mp_stack_type (self->stack, index);
 }
 
+gboolean
+abaco_mp_cast (AbacoMP* self, gint index, const gchar* type)
+{
+  g_return_val_if_fail (ABACO_IS_MP (self), FALSE);
+  g_return_val_if_fail ((index = validate_index (index)) >= 0, FALSE);
+  g_return_val_if_fail (type == MP_TYPE_NIL
+                      || type == MP_TYPE_VALUE
+                      || type == MP_TYPE_INTEGER
+                      || type == MP_TYPE_RATIONAL
+                      || type == MP_TYPE_REAL, FALSE);
+return _mp_stack_cast (self->stack, index, type);
+}
+
 void
 abaco_mp_pushdouble (AbacoMP* self, double value)
 {
@@ -681,4 +694,28 @@ abaco_mp_tostring (AbacoMP* self, gint index, int base)
   g_return_val_if_fail (ABACO_IS_MP (self), NULL);
   g_return_val_if_fail ((index = validate_index (index)) >= 0, NULL);
 return _mp_stack_peek_string (self->stack, index, base);
+}
+
+mpz_ptr
+abaco_mp_tointeger (AbacoMP* self, gint index)
+{
+  g_return_val_if_fail (ABACO_IS_MP (self), NULL);
+  g_return_val_if_fail ((index = validate_index (index)) >= 0, NULL);
+return (mpz_ptr) _mp_stack_peek (self->stack, index);
+}
+
+mpq_ptr
+abaco_mp_torational (AbacoMP* self, gint index)
+{
+  g_return_val_if_fail (ABACO_IS_MP (self), NULL);
+  g_return_val_if_fail ((index = validate_index (index)) >= 0, NULL);
+return (mpq_ptr) _mp_stack_peek (self->stack, index);
+}
+
+mpfr_ptr
+abaco_mp_toreal (AbacoMP* self, gint index)
+{
+  g_return_val_if_fail (ABACO_IS_MP (self), NULL);
+  g_return_val_if_fail ((index = validate_index (index)) >= 0, NULL);
+return (mpfr_ptr) _mp_stack_peek (self->stack, index);
 }

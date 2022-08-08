@@ -47,6 +47,8 @@ EXPORT const gchar*
 _mp_stack_type (MpStack* stack, int index);
 EXPORT void
 _mp_stack_transfer (MpStack* dst, MpStack* src);
+EXPORT gboolean
+_mp_stack_cast (MpStack* stack, int index, const gchar* type);
 EXPORT void
 _mp_stack_push_index (MpStack* stack, int index);
 EXPORT void

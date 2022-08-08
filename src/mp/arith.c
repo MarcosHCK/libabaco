@@ -30,8 +30,6 @@ abaco_mp_arith_##name (AbacoVM* vm) \
 g_error ("Incompatible Virtual Machine"); \
 ; \
   AbacoMP* mp = ABACO_MP (vm); \
-  gconstpointer thisvalue = NULL; \
-  gconstpointer lastvalue = NULL; \
   const gchar* thistype = NULL; \
   const gchar* lasttype = NULL; \
   gint i, top = abaco_vm_gettop (vm); \
@@ -46,26 +44,33 @@ g_error ("Incompatible Virtual Machine"); \
     { \
       abaco_vm_pushvalue (vm, i); \
       lasttype = abaco_mp_typename (mp, i); \
-      lastvalue = _abaco_mp_toobject (mp, -1); \
     } \
     else \
     { \
       thistype = abaco_mp_typename (mp, i); \
-      thisvalue = _abaco_mp_toobject (mp, i); \
 ; \
       do \
       { \
         if (thistype == lasttype) \
         { \
           if (lasttype == MP_TYPE_INTEGER) \
-            mpz_##name (Z (lastvalue), Z (lastvalue), Z (thisvalue)); \
+          { \
+            mpz_ptr dst = abaco_mp_tointeger (mp, -1); \
+            mpz_ptr src = abaco_mp_tointeger (mp, i); \
+            mpz_##name (dst, dst, src); \
+          } \
           if (lasttype == MP_TYPE_RATIONAL) \
-            mpq_##name (Q (lastvalue), Q (lastvalue), Q (thisvalue)); \
+          { \
+            mpq_ptr dst = abaco_mp_torational (mp, -1); \
+            mpq_ptr src = abaco_mp_torational (mp, i); \
+            mpq_##name (dst, dst, src); \
+          } \
           if (lasttype == MP_TYPE_REAL) \
           { \
-            mpfr_rnd_t round = 0; \
-            round = mpfr_get_default_rounding_mode (); \
-            mpfr_##name (R (lastvalue), R (lastvalue), R (thisvalue), round); \
+            mpfr_ptr dst = abaco_mp_toreal (mp, -1); \
+            mpfr_ptr src = abaco_mp_toreal (mp, i); \
+            mpfr_rnd_t round = mpfr_get_default_rounding_mode (); \
+            mpfr_##name (dst, dst, src, round); \
           } \
 ; \
           break; \
@@ -74,77 +79,42 @@ g_error ("Incompatible Virtual Machine"); \
         { \
           if (lasttype == MP_TYPE_REAL) \
           { \
-            mpfr_rnd_t round = 0; \
-            round = mpfr_get_default_rounding_mode (); \
+            mpfr_ptr dst = abaco_mp_toreal (mp, -1); \
+            mpfr_rnd_t round = mpfr_get_default_rounding_mode (); \
 ; \
             if (thistype == MP_TYPE_INTEGER) \
-              mpfr_##name##_z (R (lastvalue), R (lastvalue), Z (thisvalue), round); \
+            { \
+              mpz_ptr src = abaco_mp_tointeger (mp, i); \
+              mpfr_##name##_z (dst, dst, src, round); \
+            } else \
             if (thistype == MP_TYPE_RATIONAL) \
-              mpfr_##name##_q (R (lastvalue), R (lastvalue), Q (thisvalue), round); \
+            { \
+              mpq_ptr src = abaco_mp_torational (mp, i); \
+              mpfr_##name##_q (dst, dst, src, round); \
+            } else g_assert_not_reached (); \
             break; \
           } else \
-          if (lasttype == MP_TYPE_RATIONAL) \
+          if (thistype == MP_TYPE_REAL \
+            && (lasttype == MP_TYPE_INTEGER \
+             || lasttype == MP_TYPE_RATIONAL)) \
+            abaco_mp_cast (mp, -1, (lasttype = MP_TYPE_REAL)); \
+          else \
+          if (thistype == MP_TYPE_RATIONAL \
+            && lasttype == MP_TYPE_INTEGER) \
+            abaco_mp_cast (mp, -1, (lasttype = MP_TYPE_RATIONAL)); \
+          else \
+          if (thistype == MP_TYPE_INTEGER \
+            && lasttype == MP_TYPE_RATIONAL) \
           { \
-            if (thistype == MP_TYPE_INTEGER) \
-            { \
-              mpq_t tmp; \
-              mpq_init (tmp); \
-              mpq_set_z (tmp, Z (thisvalue)); \
-              mpq_##name (Q (lastvalue), Q (lastvalue), tmp); \
-              mpq_clear (tmp); \
-              break; \
-            } else \
-            if (thistype == MP_TYPE_REAL) \
-            { \
-              _abaco_mp_new_real (mp); \
-              gconstpointer new = NULL; \
-              mpfr_rnd_t round = 0; \
+            mpq_t tmp; \
+            mpq_ptr dst = abaco_mp_torational (mp, -1); \
+            mpz_ptr src = abaco_mp_tointeger (mp, i); \
 ; \
-              round = mpfr_get_default_rounding_mode (); \
-              new = _abaco_mp_toobject (mp, -1); \
-              mpfr_set_q (R (new), Q (lastvalue), round); \
-              abaco_vm_remove (vm, -2); \
-; \
-              lasttype = thistype; \
-              lastvalue = new; \
-            } \
-            else \
-            { \
-              g_assert_not_reached (); \
-            } \
-          } else \
-          if (lasttype == MP_TYPE_INTEGER) \
-          { \
-            if (thistype == MP_TYPE_RATIONAL) \
-            { \
-              _abaco_mp_new_rational (mp); \
-              gconstpointer new = NULL; \
-; \
-              new = _abaco_mp_toobject (mp, -1); \
-              mpq_set_z (Q (new), Z (lastvalue)); \
-              abaco_vm_remove (vm, -2); \
-; \
-              lasttype = thistype; \
-              lastvalue = new; \
-            } else \
-            if (thistype == MP_TYPE_REAL) \
-            { \
-              _abaco_mp_new_real (mp); \
-              gconstpointer new = NULL; \
-              mpfr_rnd_t round = 0; \
-; \
-              round = mpfr_get_default_rounding_mode (); \
-              new = _abaco_mp_toobject (mp, -1); \
-              mpfr_set_q (R (new), Q (lastvalue), round); \
-              abaco_vm_remove (vm, -2); \
-; \
-              lasttype = thistype; \
-              lastvalue = new; \
-            } \
-            else \
-            { \
-              g_assert_not_reached(); \
-            } \
+            mpq_init (tmp); \
+            mpq_set_z (tmp, src); \
+            mpq_##name (dst, dst, tmp); \
+            mpq_clear (tmp); \
+            break; \
           } \
           else \
           { \
@@ -172,8 +142,6 @@ abaco_mp_arith_div (AbacoVM* vm)
 g_error ("Incompatible Virtual Machine");
 
   AbacoMP* mp = ABACO_MP (vm);
-  gconstpointer thisvalue = NULL;
-  gconstpointer lastvalue = NULL;
   const gchar* thistype = NULL;
   const gchar* lasttype = NULL;
   gint i, top = abaco_vm_gettop (vm);
@@ -188,89 +156,74 @@ g_error ("Incompatible Virtual Machine");
     {
       abaco_vm_pushvalue (vm, i);
       lasttype = abaco_mp_typename (mp, i);
-      lastvalue = _abaco_mp_toobject (mp, -1);
     }
     else
     {
       thistype = abaco_mp_typename (mp, i);
-      thisvalue = _abaco_mp_toobject (mp, i);
 
       do
       {
-        if (thistype == lasttype)
+        if (lasttype == thistype)
         {
           if (lasttype == MP_TYPE_INTEGER)
           {
-            gconstpointer new = NULL;
-            _abaco_mp_new_rational (mp);
-            new = _abaco_mp_toobject (mp, -1);
-            mpq_set_z (Q (new), Z (lastvalue));
-            abaco_vm_remove (vm, -2);
             lasttype = MP_TYPE_RATIONAL;
-            lastvalue = new;
+            abaco_mp_cast (mp, -1, lasttype);
             continue;
           } else
           if (lasttype == MP_TYPE_RATIONAL)
-            mpq_div (Q (lastvalue), Q (lastvalue), Q (thisvalue));
+          {
+            mpq_ptr dst = abaco_mp_torational (mp, -1);
+            mpq_ptr src = abaco_mp_torational (mp, i);
+            mpq_div (dst, dst, src);
+          }
           else
           if (lasttype == MP_TYPE_REAL)
           {
-            mpfr_rnd_t round = 0;
-            round = mpfr_get_default_rounding_mode ();
-            mpfr_div (R (lastvalue), R (lastvalue), R (thisvalue), round);
+            mpfr_ptr dst = abaco_mp_toreal (mp, -1);
+            mpfr_ptr src = abaco_mp_toreal (mp, i);
+            mpfr_rnd_t round = mpfr_get_default_rounding_mode ();
+            mpfr_div (dst, dst, src, round);
           }
 
           break;
-        }
+        } else
         if (lasttype == MP_TYPE_REAL)
         {
-          mpfr_rnd_t round = 0;
-          round = mpfr_get_default_rounding_mode ();
+          mpfr_ptr dst = abaco_mp_toreal (mp, -1);
+          mpfr_rnd_t round = mpfr_get_default_rounding_mode ();
 
           if (thistype == MP_TYPE_INTEGER)
-            mpfr_div_z (R (lastvalue), R (lastvalue), Z (thisvalue), round);
+          {
+            mpz_ptr src = abaco_mp_tointeger (mp, i);
+            mpfr_div_z (dst, dst, src, round);
+          } else
           if (thistype == MP_TYPE_RATIONAL)
-            mpfr_div_q (R (lastvalue), R (lastvalue), Q (thisvalue), round);
+          {
+            mpq_ptr src = abaco_mp_torational (mp, i);
+            mpfr_div_q (dst, dst, src, round);
+          } else g_assert_not_reached ();
           break;
         } else
         if (thistype == MP_TYPE_REAL
           && (lasttype == MP_TYPE_INTEGER
-            || lasttype == MP_TYPE_RATIONAL))
+           || lasttype == MP_TYPE_RATIONAL))
+          abaco_mp_cast (mp, -1, (lasttype = MP_TYPE_REAL));
+        else
+        if (thistype == MP_TYPE_RATIONAL
+          && lasttype == MP_TYPE_INTEGER)
+          abaco_mp_cast (mp, -1, (lasttype = MP_TYPE_RATIONAL));
+        else
+        if (thistype == MP_TYPE_INTEGER
+          && lasttype == MP_TYPE_RATIONAL)
         {
-          gconstpointer new = NULL;
-          mpfr_rnd_t round = 0;
-
-          _abaco_mp_new_rational (mp);
-          round = mpfr_get_default_rounding_mode ();
-          new = _abaco_mp_toobject (mp, -1);
-
-          if (lasttype == MP_TYPE_INTEGER)
-            mpfr_set_z (R (new), Z (lastvalue), round);
-          if (lasttype == MP_TYPE_RATIONAL)
-            mpfr_set_q (R (new), Q (lastvalue), round);
-
-          abaco_vm_remove (vm, -2);
-          lasttype = MP_TYPE_REAL;
-          lastvalue = new;
-        } else
-        if (thistype == MP_TYPE_RATIONAL)
-        {
-          g_assert (lasttype == MP_TYPE_INTEGER);
-          gconstpointer new = NULL;
-          _abaco_mp_new_rational (mp);
-          new = _abaco_mp_toobject (mp, -1);
-          mpq_set_z (Q (new), Z (lastvalue));
-          abaco_vm_remove (vm, -2);
-          lasttype = MP_TYPE_RATIONAL;
-          lastvalue = new;
-        } else
-        if (lasttype == MP_TYPE_RATIONAL)
-        {
-          g_assert (thistype == MP_TYPE_INTEGER);
           mpq_t tmp;
+          mpq_ptr dst = abaco_mp_torational (mp, -1);
+          mpz_ptr src = abaco_mp_tointeger (mp, i);
+
           mpq_init (tmp);
-          mpq_set_z (tmp, Z (thisvalue));
-          mpq_div (Q (lastvalue), Q (lastvalue), tmp);
+          mpq_set_z (tmp, src);
+          mpq_div (dst, dst, tmp);
           mpq_clear (tmp);
           break;
         }
