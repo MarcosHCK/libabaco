@@ -110,28 +110,6 @@ return -1;
 
 /* internal API */
 
-gpointer
-_abaco_mp_toobject (AbacoMP* self, gint index)
-{
-  if ((index = validate_index (index)) < 0)
-    g_error ("Invalid index");
-return _mp_stack_peek (self->stack, index);
-}
-
-void
-_abaco_mp_transfer_to (AbacoMP* self, MpStack* dst)
-{
-  if (gettop () == 0)
-    g_error ("Empty stack");
-  _mp_stack_transfer (dst, self->stack);
-}
-
-void
-_abaco_mp_transfer_from (AbacoMP* self, MpStack* src)
-{
-  _mp_stack_transfer (self->stack, src);
-}
-
 void
 _abaco_mp_new_integer (AbacoMP* self)
 {
@@ -148,6 +126,22 @@ void
 _abaco_mp_new_real (AbacoMP* self)
 {
   _mp_stack_new_real (self->stack);
+}
+
+void
+_abaco_mp_transfer_to (AbacoMP* self, MpStack* dst)
+{
+  if (gettop () == 0)
+    g_error ("Empty stack");
+  _mp_stack_transfer (dst, self->stack);
+}
+
+void
+_abaco_mp_transfer_from (AbacoMP* self, MpStack* src)
+{
+  if (_mp_stack_get_length (src) == 0)
+    g_error ("Empty stack");
+  _mp_stack_transfer (self->stack, src);
 }
 
 const gchar*

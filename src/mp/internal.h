@@ -29,18 +29,16 @@
 extern "C" {
 #endif // __cplusplus
 
-EXPORT gpointer
-_abaco_mp_toobject (AbacoMP* self, gint index);
-EXPORT void
-_abaco_mp_transfer_to (AbacoMP* self, MpStack* dst);
-EXPORT void
-_abaco_mp_transfer_from (AbacoMP* self, MpStack* src);
 EXPORT void
 _abaco_mp_new_integer (AbacoMP* self);
 EXPORT void
 _abaco_mp_new_rational (AbacoMP* self);
 EXPORT void
 _abaco_mp_new_real (AbacoMP* self);
+EXPORT void
+_abaco_mp_transfer_to (AbacoMP* self, MpStack* dst);
+EXPORT void
+_abaco_mp_transfer_from (AbacoMP* self, MpStack* src);
 EXPORT const gchar*
 _abaco_mp_lookup_constant (AbacoMP* self, const gchar* key);
 EXPORT gpointer
