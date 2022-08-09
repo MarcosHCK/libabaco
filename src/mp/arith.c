@@ -18,10 +18,6 @@
 #include <config.h>
 #include <internal.h>
 
-#define Z(ptr) (*(mpz_t*) ((ptr)))
-#define Q(ptr) (*(mpq_t*) ((ptr)))
-#define R(ptr) (*(mpfr_t*) ((ptr)))
-
 #define simple(name) \
 int \
 abaco_mp_arith_##name (AbacoVM* vm) \

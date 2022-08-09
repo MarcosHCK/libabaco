@@ -35,6 +35,9 @@
 #define ABACO_IS_MP(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), ABACO_TYPE_MP))
 typedef struct _AbacoMP AbacoMP;
 
+#define ABACO_ASSOC_LEFT FALSE
+#define ABACO_ASSOC_RIGHT TRUE
+
 #define MP_TYPE_NIL (__type_nil__ ())
 #define MP_TYPE_VALUE (__type_value__ ())
 #define MP_TYPE_INTEGER (__type_integer__ ())
@@ -113,14 +116,13 @@ MP_EXPORT const gchar* __type_real__ (void) G_GNUC_CONST;
  *
  */
 
-MP_EXPORT int
-abaco_mp_arith_add (AbacoVM* vm);
-MP_EXPORT int
-abaco_mp_arith_sub (AbacoVM* vm);
-MP_EXPORT int
-abaco_mp_arith_mul (AbacoVM* vm);
-MP_EXPORT int
-abaco_mp_arith_div (AbacoVM* vm);
+MP_EXPORT int abaco_mp_arith_add (AbacoVM* vm);
+MP_EXPORT int abaco_mp_arith_sub (AbacoVM* vm);
+MP_EXPORT int abaco_mp_arith_mul (AbacoVM* vm);
+MP_EXPORT int abaco_mp_arith_div (AbacoVM* vm);
+MP_EXPORT int abaco_mp_power_sqrt (AbacoVM* vm);
+MP_EXPORT int abaco_mp_power_cbrt (AbacoVM* vm);
+MP_EXPORT int abaco_mp_power_pow (AbacoVM* vm);
 
 #if __cplusplus
 }

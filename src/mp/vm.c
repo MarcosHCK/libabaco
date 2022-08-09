@@ -595,6 +595,7 @@ void
 abaco_mp_load_stdlib (AbacoMP* self)
 {
   g_return_if_fail (ABACO_IS_MP (self));
+  AbacoVM* vm = ABACO_VM (self);
   AbacoRules* rules = (self->rules);
   GHashTable* reg = (self->functions);
   MpClosure* closure = NULL;
@@ -619,6 +620,16 @@ abaco_mp_load_stdlib (AbacoMP* self)
     g_assert_no_error (tmp_err);
   closure = _mp_cclosure_new (NULL, 0, abaco_mp_arith_div);
   g_hash_table_insert (reg, g_strdup ("/"), closure);
+
+  abaco_rules_add_operator (rules, "[\\^]", TRUE, 4, FALSE, &tmp_err);
+    g_assert_no_error (tmp_err);
+  closure = _mp_cclosure_new (NULL, 0, abaco_mp_power_pow);
+  g_hash_table_insert (reg, g_strdup ("^"), closure);
+
+  abaco_vm_pushcclosure (vm, abaco_mp_power_sqrt, 0);
+  abaco_vm_register_function (vm, "sqrt");
+  abaco_vm_pushcclosure (vm, abaco_mp_power_cbrt, 0);
+  abaco_vm_register_function (vm, "cbrt");
 }
 
 #undef catch
