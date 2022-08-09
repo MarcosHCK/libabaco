@@ -50,7 +50,14 @@ _mp_locate_section (GBytes* code, BSectionType type)
     if (section->flags & B_SECTION_VIRTUAL)
       ptr += sizeof (BSection);
     else
-      ptr += section->size;
+    {
+      gsize size = section->size;
+      gsize miss = size % B_SECTION_ALIGN;
+      if (miss > 0)
+        ptr += size + (B_SECTION_ALIGN - miss);
+      else
+        ptr += size;
+    }
   }
 return NULL;
 }
@@ -61,7 +68,6 @@ _mp_load_strtab (GBytes* code, const BSection* section)
   GPtrArray* strtab = NULL;
   gconstpointer ptr = NULL;
   gconstpointer top = NULL;
-  const gchar* strings = NULL;
   gsize length = 0;
 
   length = g_bytes_get_size (code);
@@ -115,7 +121,14 @@ _mp_locate_entry_offset (GBytes* code)
     if (section->flags & B_SECTION_VIRTUAL)
       ptr += sizeof (BSection);
     else
-      ptr += section->size;
+    {
+      gsize size = section->size;
+      gsize miss = size % B_SECTION_ALIGN;
+      if (miss > 0)
+        ptr += size + (B_SECTION_ALIGN - miss);
+      else
+        ptr += size;
+    }
   }
 return offset;
 }

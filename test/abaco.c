@@ -90,28 +90,43 @@ print_code (GBytes* bytes)
   g_string_free (buf, TRUE);
 }
 
-static const gchar*
-get_strtab (GBytes* bytes)
+static const BSection*
+get_section_by_type (GBytes* bytes, BSectionType type)
 {
   gsize i, length;
   const guint8* data = g_bytes_get_data (bytes, &length);
   const guint8* top = data + length;
   const BSection* section = NULL;
-  const gchar* tab = NULL;
 
   while (data < top)
   {
     section = (BSection*) data;
-    tab = (gchar*) (data + sizeof (BSection));
     if (section->flags & B_SECTION_VIRTUAL)
       data += sizeof (BSection);
     else
-      data += section->size;
+    {
+      gsize size = section->size;
+      gsize miss = size % B_SECTION_ALIGN;
+      if (miss > 0)
+        data += size + (B_SECTION_ALIGN - miss);
+      else
+        data += size;
+    }
 
-    if (section->type == B_SECTION_TYPE_STRTAB)
-      return tab;
+    if (section->type == type)
+      return section;
   }
 return NULL;
+}
+
+static const gchar*
+get_strtab (GBytes* bytes)
+{
+  const BSection* strtab = NULL;
+  BSectionType type = B_SECTION_TYPE_STRTAB;
+
+  strtab = get_section_by_type (bytes, type);
+return (const gchar*) ( & (strtab [1]));
 }
 
 static const gchar*
@@ -159,7 +174,14 @@ disassemble (GBytes* bytes)
     if (section->flags & B_SECTION_VIRTUAL)
       data += sizeof (BSection);
     else
-      data += section->size;
+    {
+      gsize size = section->size;
+      gsize miss = size % B_SECTION_ALIGN;
+      if (miss > 0)
+        data += size + (B_SECTION_ALIGN - miss);
+      else
+        data += size;
+    }
 
     g_print
     ("\r\n"
@@ -209,6 +231,23 @@ disassemble (GBytes* bytes)
       g_string_truncate (buf, 0);
       ++opcode;
     }
+    else
+    if (section->type == B_SECTION_TYPE_STRTAB)
+    {
+      gconstpointer ptr = NULL;
+      gconstpointer top = NULL;
+      gsize length = 0;
+      guint i = 0;
+
+      ptr = sizeof (BSection) + (gpointer) section;
+      top = ptr + section->size - sizeof (BSection);
+
+      while (ptr < top)
+      {
+        g_print ("  %i: '%s'\r\n", i++, (gchar*) ptr);
+        ptr += strlen ((gchar*) ptr) + 1;
+      }
+    }
   }
 
   g_string_free (buf, TRUE);
@@ -217,25 +256,11 @@ disassemble (GBytes* bytes)
 static gdouble*
 get_stack (GBytes* bytes)
 {
-  gsize i, length;
-  const guint8* data = g_bytes_get_data (bytes, &length);
-  const guint8* top = data + length;
-  const BSection* section = NULL;
-  const gchar* tab = NULL;
+  const BSection* stack = NULL;
+  BSectionType type = B_SECTION_TYPE_STRTAB;
 
-  while (data < top)
-  {
-    section = (BSection*) data;
-    tab = (gchar*) (data + sizeof (BSection));
-    if (section->flags & B_SECTION_VIRTUAL)
-      data += sizeof (BSection);
-    else
-      data += section->size;
-
-    if (section->type == B_SECTION_TYPE_STACK)
-      return g_new0 (gdouble, section->size);
-  }
-return NULL;
+  stack = get_section_by_type (bytes, type);
+return g_new0 (gdouble, stack->size);
 }
 
 static gdouble
@@ -248,17 +273,17 @@ execute (GBytes* bytes)
   const BSection* section = NULL;
   const BOpcode* opcode = NULL;
 
-  gdouble* stack = get_stack (bytes);
-  if (stack == NULL)
-  {
-    g_critical ("Missing stack section");
-    g_assert_not_reached ();
-  }
-
   const gchar* strtab = get_strtab (bytes);
   if (strtab == NULL)
   {
     g_critical ("Missing string table section");
+    g_assert_not_reached ();
+  }
+
+  gdouble* stack = get_stack (bytes);
+  if (stack == NULL)
+  {
+    g_critical ("Missing stack section");
     g_assert_not_reached ();
   }
 
@@ -270,7 +295,14 @@ execute (GBytes* bytes)
     if (section->flags & B_SECTION_VIRTUAL)
       data += sizeof (BSection);
     else
-      data += section->size;
+    {
+      gsize size = section->size;
+      gsize miss = size % B_SECTION_ALIGN;
+      if (miss > 0)
+        data += size + (B_SECTION_ALIGN - miss);
+      else
+        data += size;
+    }
 
     if (section->type == B_SECTION_TYPE_BITS
       && section->flags == B_SECTION_CODE)

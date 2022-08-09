@@ -73,9 +73,12 @@ namespace Abaco
         var sectsz = sizeof (Abaco.Bytecode.Section);
         var align = Abaco.Bytecode.SECTION_ALIGN;
         var header = Abaco.Bytecode.Section ();
-        var bytes = section.finish ();
+        var bytes = (GLib.Bytes) null;
         var padding = (int) 0;
         var name = (uint) 0;
+
+        name = strtab.intern (section.name);
+        bytes = section.finish ();
 
         if (SectionFlags.VIRTUAL in section.flags)
           header.size = (uint32) section.size;
@@ -86,15 +89,12 @@ namespace Abaco
           if (miss > 0)
           {
             padding = align - (int) miss;
-            header.size = (uint32) (size + padding);
           }
-          else
-          {
-            header.size = (uint32) (size);
-          }
+
+          assert (size < (size_t) uint32.MAX);
+          header.size = (uint32) size;
         }
 
-        name = strtab.intern (section.name);
         header.name = (uint16) name;
         header.type = section.types;
         header.flags = section.flags;
@@ -205,6 +205,46 @@ namespace Abaco
       private GLib.Queue<uint> unused;
       private uint total;
 
+      /* private API */
+
+      private static int uint_compare (uint a_, uint b_)
+      {
+        var a = (int) (uint) a_;
+        var b = (int) (uint) b_;
+        return a - b; 
+      }
+
+      private bool find_aligned (uint count, out uint nth)
+      {
+        uint last = 0, index = 0, i = 0;
+        unowned GLib.List<uint>? head = unused.head;
+        unowned GLib.List<uint>? list = null;
+
+        for (list = head; list != null; list = list.next)
+        {
+          var data = list.data;
+          var reg = (uint) data;
+          if (i == 0)
+          {
+            last = reg;
+            nth = index;
+            ++i;
+          }
+          else
+          {
+            if (i == count)
+              return true;
+            if (last == reg - 1)
+              ++i;
+            else
+              i = 0;
+          }
+
+          ++index;
+        }
+      return (i == count) ? true : false;
+      }
+
       /* public API */
 
       public uint alloc ()
@@ -219,14 +259,24 @@ namespace Abaco
 
       public void unalloc (uint reg)
       {
-        unused.push_head (reg);
+        unused.insert_sorted (reg, uint_compare);
+        //unused.push_head (reg);
       }
 
       public void alloca (uint[] regs)
       {
-        uint i, length = regs.length;
-        for (i = 0; i < length; i++)
-          regs [i] = total++;
+        uint i, nth = 0;
+        uint length = regs.length;
+        if (!find_aligned (length, out nth))
+        {
+          for (i = 0; i < length; i++)
+            regs [i] = total++;
+        }
+        else
+        {
+          for (i = 0; i < regs.length; i++)
+           regs [i] = unused.pop_nth (nth);
+        }
       }
 
       public void allocs (uint[] regs)
@@ -414,7 +464,7 @@ namespace Abaco
         case Ast.SymbolKind.FUNCTION:
           {
             var nth = (int) node.n_children ();
-            uint[] regs = (nth > 0) ? code.prepcall (stack, nth) : null;
+            var regs = (nth > 0) ? code.prepcall (stack, nth) : null;
             reg = stack.alloc ();
 
             opcode.code = Code.LOADF;
