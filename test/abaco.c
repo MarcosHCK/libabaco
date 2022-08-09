@@ -232,6 +232,28 @@ disassemble (GBytes* bytes)
       ++opcode;
     }
     else
+    if (section->type == B_SECTION_TYPE_NOTES)
+    {
+      gconstpointer ptr = NULL;
+      gconstpointer top = NULL;
+      BNote* note = NULL;
+      gsize length = 0;
+      guint i = 0;
+
+      ptr = sizeof (BSection) + (gpointer) section;
+      top = ptr + section->size - sizeof (BSection);
+
+      while (ptr < top)
+      {
+        note = (BNote*) ptr;
+        g_print
+        ("  '%s' = '%s'\r\n",
+         get_strtab_n (strtab, note->key),
+         get_strtab_n (strtab, note->value));
+        ptr += sizeof (BNote);
+      }
+    }
+    else
     if (section->type == B_SECTION_TYPE_STRTAB)
     {
       gconstpointer ptr = NULL;

@@ -25,6 +25,11 @@ namespace Abaco
     const int STRIDX_PREALLOC = 32;
     static GLib.Bytes trash;
 
+    private interface Checkable : Section
+    {
+      public abstract void check ();
+    }
+
     private class Blob : GLib.MemoryOutputStream
     {
       /* public API */
@@ -64,6 +69,8 @@ namespace Abaco
 
     private class Binary : Blob
     {
+      public StackSection stack { get; private set; }
+      public NotesSection notes { get; private set; }
       public StrtabSection strtab { get; private set; }
 
       /* public API */
@@ -76,6 +83,12 @@ namespace Abaco
         var bytes = (GLib.Bytes) null;
         var padding = (int) 0;
         var name = (uint) 0;
+
+        if (section is Checkable)
+        {
+          var checkable = (Checkable) section;
+              checkable.check ();
+        }
 
         name = strtab.intern (section.name);
         bytes = section.finish ();
@@ -112,6 +125,8 @@ namespace Abaco
 
       public override GLib.Bytes finish () throws GLib.Error
       {
+        this.put (stack);
+        this.put (notes);
         this.put (strtab);
       return base.finish ();
       }
@@ -120,11 +135,13 @@ namespace Abaco
 
       public Binary ()
       {
-        this.strtab = new StrtabSection (".strtab");
+        this.strtab = new StrtabSection ();
+        this.notes = new NotesSection (strtab);
+        this.stack = new StackSection ();
       }
     }
 
-    private class CodeSection : Section
+    private class CodeSection : Section, Checkable
     {
       private GLib.Queue<uint> stack;
 
@@ -200,7 +217,7 @@ namespace Abaco
       }
     }
 
-    private class StackSection : Section
+    private class StackSection : Section, Checkable
     {
       private GLib.Queue<uint> unused;
       private uint total;
@@ -260,7 +277,6 @@ namespace Abaco
       public void unalloc (uint reg)
       {
         unused.insert_sorted (reg, uint_compare);
-        //unused.push_head (reg);
       }
 
       public void alloca (uint[] regs)
@@ -307,13 +323,65 @@ namespace Abaco
 
       /* Constructors */
 
-      public StackSection (string name)
+      public StackSection ()
       {
-        base (name);
+        base (".stack");
         this.types = SectionType.STACK;
         this.flags = SectionFlags.BSS;
         this.unused = new GLib.Queue<uint> ();
         this.total = 0;
+      }
+    }
+
+    private class NotesSection : Section
+    {
+      private GLib.HashTable<unowned string?, unowned string?> notes;
+      private GLib.StringChunk store;
+      private StrtabSection strtab;
+
+      /* public API */
+
+      public void annotate (string key, string value)
+      {
+        unowned string? there = null;
+        if (notes.lookup_extended (key, null, out there))
+        {
+          if (there != value)
+            error ("Trying to annotate two key with different values");
+        }
+        else
+        {
+          key = store.insert (key);
+          value = store.insert (value);
+          notes.insert (key, value);
+        }
+      }
+
+      public override GLib.Bytes finish () throws GLib.Error
+      {
+        var iter = new HashTableIter<unowned string?, unowned string?> (notes);
+        var note = Abaco.Bytecode.Note ();
+        unowned string? key, value;
+
+        while (iter.next (out key, out value))
+        {
+          note.key = (uint16) strtab.intern (key);
+          note.value = (uint16) strtab.intern (value);
+          this.write_all ((uint8[]) &note, null);
+        }
+      return base.finish ();
+      }
+
+      /* Constructor */
+
+      public NotesSection (StrtabSection strtab)
+      {
+        base (".notes");
+        this.types = SectionType.NOTES;
+        this.flags = SectionFlags.DATA;
+        this.notes = new GLib.HashTable<unowned string?, unowned string?> (GLib.str_hash, GLib.str_equal);
+        this.store = new GLib.StringChunk (STRTAB_BLOCKSZ);
+        this.strtab = strtab;
       }
     }
 
@@ -353,9 +421,9 @@ namespace Abaco
 
       /* constructors */
 
-      public StrtabSection (string name)
+      public StrtabSection ()
       {
-        base (name);
+        base (".strtab");
         this.types = SectionType.STRTAB;
         this.flags = SectionFlags.DATA;
         this.strtab = new GLib.HashTable<unowned string?, uint> (GLib.str_hash, GLib.str_equal);
@@ -437,7 +505,8 @@ namespace Abaco
       {
         unowned var code = (CodeSection) sections [0];
         unowned var stack = (StackSection) sections [1];
-        unowned var strtab = (StrtabSection) sections [2];
+        unowned var notes = (NotesSection) sections [2];
+        unowned var strtab = (StrtabSection) sections [3];
         unowned var symbol = node.symbol;
         unowned var kind = node.kind;
         var opcode = Opcode ();
@@ -515,7 +584,8 @@ namespace Abaco
       var binary = new Binary ();
       var arguments = new Arguments ();
       var code = new CodeSection (".code");
-      var stack = new StackSection (".stack");
+      var stack = binary.stack;
+      var notes = binary.notes;
       var strtab = binary.strtab;
 
       arguments.count (tree);
@@ -523,11 +593,12 @@ namespace Abaco
 
       /* begin assemble */
 
-      uintptr args [5];
+      uintptr args [6];
       args [1] = (uintptr) arguments;
       args [2] = (uintptr) code;
       args [3] = (uintptr) stack;
-      args [4] = (uintptr) strtab;
+      args [4] = (uintptr) notes;
+      args [5] = (uintptr) strtab;
       var cp = (Compiler) args;
           cp.traverse (tree);
 
@@ -548,15 +619,17 @@ namespace Abaco
         stack.unalloc (reg);
       }
 
-      arguments.unalloc (stack);
+      {
+        unowned var key = NoteNamespace.SYMBOLS + "main";
+        unowned var val = sizeof (Abaco.Bytecode.Section);
+        notes.annotate (key, val.to_string ());
+      }
 
-      code.check ();
-      stack.check ();
+      arguments.unalloc (stack);
 
       /* finish assemble */
 
       binary.put (code);
-      binary.put (stack);
     return binary.finish ();
     }
 

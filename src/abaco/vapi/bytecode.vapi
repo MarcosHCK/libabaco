@@ -43,6 +43,7 @@ namespace Abaco.Bytecode
     BITS,
     STACK,
     STRTAB,
+    NOTES,
   }
 
   [Flags]
@@ -56,6 +57,20 @@ namespace Abaco.Bytecode
     DATA,
     CODE,
     BSS,
+  }
+
+  [CCode (cheader_filename = "bytecode.h")]
+  public struct Note
+  {
+    public uint16 key;
+    public uint16 value;
+  }
+
+  [CCode (cheader_filename = "bytecode.h")]
+  public class NoteNamespace
+  {
+    public const string SYMBOLS;
+    public const string DEBUG;
   }
 
   [CCode (cheader_filename = "bytecode.h")]

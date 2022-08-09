@@ -30,7 +30,7 @@ namespace Abaco.Ast
   public class Node
   {
     private AstPatch.Chain chain;
-    private Datalist<void*> notes;
+    private Datalist<string?> notes;
     public SymbolKind kind { get; private set; }
     public string symbol { get; private set; }
 
@@ -38,6 +38,13 @@ namespace Abaco.Ast
     public void prepend (Node child) { AstPatch.Chain.prepend (ref chain, ref child.chain); }
     public uint n_children () { return AstPatch.Chain.n_children (ref chain); }
     public void children_foreach (Foreach callback) { AstPatch.Chain.foreach_data (ref chain, callback); }
+
+    public void set_note (string index, string content) { notes.set_data (index, content); }
+    public void set_note_by_id (GLib.Quark index, string content) { notes.id_set_data (index, content); }
+    public unowned string get_note (string index) { return notes.get_data (index); }
+    public unowned string get_note_by_id (GLib.Quark index) { return notes.id_get_data (index); }
+    public string steal_note (string index) { return notes.remove_no_notify (index); }
+    public string steal_note_by_id (GLib.Quark index) { return notes.id_remove_no_notify (index); }
 
     public Node (string symbol, SymbolKind kind)
     {

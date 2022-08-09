@@ -23,6 +23,7 @@
 
 typedef struct _BHeader BHeader;
 typedef struct _BSection BSection;
+typedef struct _BNote BNote;
 typedef union  _BOpcode BOpcode;
 
 struct _BHeader
@@ -57,6 +58,7 @@ typedef enum
   B_SECTION_TYPE_BITS = 0,
   B_SECTION_TYPE_STACK,
   B_SECTION_TYPE_STRTAB,
+  B_SECTION_TYPE_NOTES,
 } BSectionType;
 
 typedef enum
@@ -70,6 +72,15 @@ typedef enum
   B_SECTION_CODE = B_SECTION_READ | B_SECTION_EXECUTE,
   B_SECTION_BSS = B_SECTION_READ | B_SECTION_WRITE | B_SECTION_VIRTUAL,
 } BSectionFlags;
+
+struct _BNote
+{
+  uint16_t key;
+  uint16_t value;
+} PACKED;
+
+#define B_NOTE_NAMESPACE_SYMBOLS "symbols::"
+#define B_NOTE_NAMESPACE_DEBUG "debug::"
 
 /* Bytecode structure heavily based on Lua bytecode */
 /*    0   1   2   3   4   5    6   7   8   9  10  11  12  13   14  15  16  17  18  19  20  21  22   23  24  25  26  27  28  29  30  31   */
