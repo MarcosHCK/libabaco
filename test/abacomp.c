@@ -21,14 +21,123 @@
 #include <bytecode.h>
 #include <glib.h>
 
+const gchar* output = NULL;
+const gchar* execute = NULL;
+gboolean benchmark = FALSE;
+
+#define _g_free0(var) ((var == NULL) ? NULL : (var = (g_free (var), NULL)))
+
+static inline void
+do_report (AbacoVM* vm, AbacoMP* mp, const gchar* code)
+{
+  GString* buffer = NULL;
+  GError* tmp_err = NULL;
+  gchar* result = NULL;
+
+  if (output != NULL)
+  {
+    GBytes* dump = NULL;
+    gchar* ptr = NULL;
+    gsize length = 0;
+
+    dump = abaco_vm_dump (vm, -1);
+    ptr = g_bytes_get_data (dump, &length);
+
+    g_file_set_contents (output, ptr, length, &tmp_err);
+    if (G_UNLIKELY (tmp_err != NULL))
+    {
+      g_critical
+      ("(%s): %s: %i: %s",
+       G_STRLOC,
+       g_quark_to_string
+       (tmp_err->domain),
+       tmp_err->code,
+       tmp_err->message);
+      g_error_free (tmp_err);
+      g_assert_not_reached ();
+    }
+  }
+
+  if (!benchmark)
+  {
+             abaco_vm_call (vm, 0);
+    result = abaco_mp_tostring (mp, -1, 10);
+
+    g_print ("> '%s' = '%s'\r\n", code, result);
+    _g_free0 (result);
+  }
+  else
+  {
+    const gdouble spt = (gdouble) CLOCKS_PER_SEC;
+    const gdouble mpt = spt / (gdouble) 1000;
+    const int tries = 100000;
+    const int reps = 10;
+    gdouble partial = 0;
+    gchar* result = NULL;
+    gchar* last = NULL;
+    clock_t src, dst;
+    int i, j;
+
+    buffer = g_string_sized_new (128);
+
+    g_print ("trying with %i cycles, %i times\r\n", tries, reps);
+
+    for (i = 0; i < reps; i++)
+    {
+      for (j = 0; j < tries; j++)
+      {
+        abaco_vm_pushvalue (vm, 0);
+        src = clock ();
+        abaco_vm_call (vm, 0);
+        dst = clock ();
+
+        if (j == 0)
+        {
+          partial = (gdouble) (dst - src);
+          last = abaco_mp_tostring (mp, -1, 10);
+        }
+        else
+        {
+          result = abaco_mp_tostring (mp, -1, 10);
+          if (g_strcmp0 (result, last))
+            g_error ("Results differs");
+
+          _g_free0 (last);
+          last = result;
+
+          partial += (gdouble) (dst - src);
+          partial /= 2;
+        }
+      }
+
+      abaco_vm_settop (vm, 1);
+      g_string_append_printf (buffer, "> '%s'", code);
+      g_string_append_printf (buffer, " = '%s'", result);
+      g_string_append_printf (buffer, " (took ");
+      g_string_append_printf (buffer, "%lf ticks, ", partial);
+      g_string_append_printf (buffer, "%lf micros, ", partial / mpt);
+      g_string_append_printf (buffer, "%lf seconds)", partial / spt);
+      g_print ("%.*s\r\n", buffer->len, buffer->str);
+      g_string_truncate (buffer, 0);
+      _g_free0 (result);
+    }
+
+    g_string_free (buffer, TRUE);
+  }
+}
+
 int
 main (int argc, char* argv [])
 {
   GError* tmp_err = NULL;
   GOptionContext* ctx = NULL;
+
   GOptionEntry entries[] =
   {
-    {NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, NULL},
+    { "benchmark", 0, 0, G_OPTION_ARG_NONE, &benchmark, NULL, NULL },
+    { "execute", 'e', 0, G_OPTION_ARG_STRING, &execute, NULL, "CODE" },
+    { "output", 'o', 0, G_OPTION_ARG_FILENAME, &output, NULL, "FILE" },
+    { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, NULL },
   };
 
   ctx =
@@ -41,77 +150,79 @@ main (int argc, char* argv [])
   g_option_context_free (ctx);
 
   if (G_UNLIKELY (tmp_err != NULL))
-    {
-      g_critical
-      ("(%s): %s: %i: %s",
-       G_STRLOC,
-       g_quark_to_string
-       (tmp_err->domain),
-       tmp_err->code,
-       tmp_err->message);
-      g_error_free (tmp_err);
-      g_assert_not_reached ();
-    }
+  {
+    g_critical
+    ("(%s): %s: %i: %s",
+     G_STRLOC,
+     g_quark_to_string
+     (tmp_err->domain),
+     tmp_err->code,
+     tmp_err->message);
+    g_error_free (tmp_err);
+    g_assert_not_reached ();
+  }
   else
+  {
+    AbacoVM* vm = abaco_mp_new ();
+    AbacoMP* mp = ABACO_MP (vm);
+
+    if (execute != NULL)
     {
-      AbacoVM* vm = abaco_mp_new ();
-      AbacoMP* mp = ABACO_MP (vm);
-      int i, j, k;
-
-      for (i = 1; i < argc; i++)
+      abaco_vm_loadstring (vm, execute, &tmp_err);
+      if (G_UNLIKELY (tmp_err != NULL))
       {
-        g_print ("> %s\r\n", argv [i]);
-        abaco_vm_loadstring (vm, argv [i], &tmp_err);
-        if (G_UNLIKELY (tmp_err != NULL))
-        {
-          g_critical
-          ("(%s): %s: %i: %s",
-           G_STRLOC,
-           g_quark_to_string
-           (tmp_err->domain),
-           tmp_err->code,
-           tmp_err->message);
-          g_error_free (tmp_err);
-          g_assert_not_reached ();
-        }
-
-        const gdouble spt = (gdouble) CLOCKS_PER_SEC;
-        const gdouble mpt = spt / (gdouble) 1000;
-        const int tries = 100000;
-        const int reps = 10;
-        gdouble result = -1;
-        gdouble last = -1;
-
-        for (j = 0; j < reps; j++)
-        {
-          clock_t start = clock ();
-          for (k = 0; k < tries; k++)
-          {
-            abaco_vm_pushvalue (vm, 0);
-            if (abaco_vm_call (vm, 0) > 0)
-            {
-              result = abaco_mp_todouble (mp, -1);
-                       abaco_vm_settop (vm, 1);
-            }
-          }
-  
-          clock_t stop = clock ();
-          gdouble took = (gdouble) (stop - start);
-                  took /= (gdouble) tries;
-                  last = result;
-
-          if (j > 0 && result != last)
-            g_error ("Mismatching results for same input");
-
-          g_print ("took %lf ticks, %lf micros, %lf secs\r\n",
-                    took,
-                    took / mpt,
-                    took / spt);
-        }
-
-        abaco_vm_settop (vm, 0);
-        g_print ("result %lf\r\n", result);
+        g_critical
+        ("(%s): %s: %i: %s",
+         G_STRLOC,
+         g_quark_to_string
+         (tmp_err->domain),
+         tmp_err->code,
+         tmp_err->message);
+        g_error_free (tmp_err);
+        g_assert_not_reached ();
       }
+
+      do_report (vm, mp, execute);
     }
+    else
+    {
+      GBytes* bytes;
+      gchar* content;
+      gsize length;
+
+      g_file_get_contents (argv [1], &content, &length, &tmp_err);
+      if (G_UNLIKELY (tmp_err != NULL))
+      {
+        g_critical
+        ("(%s): %s: %i: %s",
+        G_STRLOC,
+        g_quark_to_string
+        (tmp_err->domain),
+        tmp_err->code,
+        tmp_err->message);
+        g_error_free (tmp_err);
+        g_assert_not_reached ();
+      }
+
+      bytes =
+      g_bytes_new_take (content, length);
+      abaco_vm_loadbytes (vm, bytes, &tmp_err);
+      if (G_UNLIKELY (tmp_err != NULL))
+      {
+        g_critical
+        ("(%s): %s: %i: %s",
+        G_STRLOC,
+        g_quark_to_string
+        (tmp_err->domain),
+        tmp_err->code,
+        tmp_err->message);
+        g_error_free (tmp_err);
+        g_assert_not_reached ();
+      }
+
+      do_report (vm, mp, content);
+      g_bytes_unref (bytes);
+    }
+  }
 return 0;
 }

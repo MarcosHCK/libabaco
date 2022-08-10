@@ -32,6 +32,7 @@ namespace Abaco
     public abstract void insert (int index);
     public abstract void remove (int index);
     public abstract void pushcclosure (CClosure closure, int upvalues);
+    public abstract GLib.Bytes dump (int index);
 
     public abstract bool loadbytes (GLib.Bytes bytes) throws GLib.Error;
     public virtual bool loadstring (string code) throws GLib.Error

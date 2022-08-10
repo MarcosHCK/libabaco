@@ -340,8 +340,15 @@ abaco_mp_abaco_vm_iface_loadbytes (AbacoVM* pself, GBytes* bytes, GError** error
   }
   else
   {
+    gpointer pheader = (gpointer) input;
+    BHeader* header = (BHeader*) pheader;
     input += sizeof (BHeader);
     length -= sizeof (BHeader);
+
+    uint32_t chke = header->checksum;
+    uint32_t chkc = _bytecode_checksum (input, length);
+    if (G_UNLIKELY (chke != chkc))
+      g_error ("Invalid program: bad checksum");
 
     bytes = g_bytes_new_static (input, length);
     closure = _mp_function_new (bytes);
@@ -477,6 +484,80 @@ abaco_mp_abaco_vm_iface_register_function (AbacoVM* pself, const gchar* expr)
   }
 }
 
+static inline guint
+_mp_count_sectors (GBytes* code)
+{
+  guint count = 0;
+  gsize length = 0;
+  gconstpointer ptr = g_bytes_get_data (code, &length);
+  gconstpointer top = ptr + length;
+  BSection* section = NULL;
+
+  while (ptr < top)
+  {
+    section = (BSection*) ptr;
+    if (section->flags & B_SECTION_VIRTUAL)
+      ptr += sizeof (BSection);
+    else
+    {
+      gsize size = section->size;
+      gsize miss = size % B_SECTION_ALIGN;
+      if (miss > 0)
+        ptr += size + (B_SECTION_ALIGN - miss);
+      else
+        ptr += size;
+    }
+
+    ++count;
+  }
+return count;
+}
+
+static GBytes*
+abaco_mp_abaco_vm_iface_dump (AbacoVM* pself, gint index)
+{
+  AbacoMP* self = ABACO_MP (pself);
+  MpClosure* closure = NULL;
+  GBytes* binary = NULL;
+  GBytes* code = NULL;
+
+  if ((index = validate_index (index)) < 0)
+    g_error ("Invalid index");
+
+  GValue value = G_VALUE_INIT;
+  _mp_stack_peek_value (self->stack, index, &value);
+  if (!G_VALUE_HOLDS (&value, _MP_TYPE_CLOSURE))
+    g_error ("Attempt to dump a non-function value");
+  else
+  {
+    if (!G_VALUE_HOLDS (&value, _MP_TYPE_FUNCTION))
+      g_error ("Can't dump C closure");
+
+    closure = _mp_value_get_closure (&value);
+    code = _mp_function_get_code (_MP_FUNCTION (closure));
+    code = g_bytes_ref (code);
+    g_value_unset (&value);
+
+    gsize length, size;
+    gpointer src = (gpointer) g_bytes_get_data (code, &length);
+    gpointer dst = g_malloc ((size = length + sizeof (BHeader)));
+    BHeader header = {0};
+
+    binary = g_bytes_new_take (dst, size);
+    header.umagic = *(uint32_t*) & (B_HEADER_MAGIC);
+    header.checksum = _bytecode_checksum (src, length);
+    header.sectn = _mp_count_sectors (code);
+    header.size = length;
+
+    memcpy (dst, &header, sizeof (BHeader));
+    memcpy (dst + sizeof (BHeader), src, length);
+    g_bytes_unref (code);
+    return binary;
+  }
+return binary;
+}
+
+
 /* class */
 
 static void
@@ -495,6 +576,7 @@ abaco_mp_abaco_vm_iface (AbacoVMIface* iface)
   iface->call = abaco_mp_abaco_vm_iface_call;
   iface->register_operator = abaco_mp_abaco_vm_iface_register_operator;
   iface->register_function = abaco_mp_abaco_vm_iface_register_function;
+  iface->dump = abaco_mp_abaco_vm_iface_dump;
 }
 
 static void

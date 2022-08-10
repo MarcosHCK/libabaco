@@ -28,8 +28,15 @@ typedef union  _BOpcode BOpcode;
 
 struct _BHeader
 {
-  uint8_t magic [4];
+  union
+  {
+    uint8_t magic [4];
+    uint32_t umagic;
+  };
+
+  uint32_t checksum;
   uint32_t sectn;
+  uint32_t size;
 } PACKED;
 
 struct _BSection
@@ -143,4 +150,25 @@ typedef enum
   B_OPCODE_MAXOPCODE,
 } BOpcodeCode;
 
+#if __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+#if !defined(MP_EXTERN)
+#if defined(_MSC_VER)
+#define MP_EXTERN __declspec(dllexport) extern
+#elif __GNUC__ >= 4
+#define MP_EXTERN __attribute__((visibility("default"))) extern
+#else
+#define MP_EXTERN extern
+#endif
+#endif
+
+MP_EXTERN uint32_t _bytecode_checksum (const uint8_t* code, uint32_t size);
+
+#if __cplusplus
+}
+#endif // __cplusplus
+
+#undef MP_EXTERN
 #endif // __LIBABACO_BYTECODE__
