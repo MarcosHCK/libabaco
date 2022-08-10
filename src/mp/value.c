@@ -90,6 +90,8 @@ struct _MpStack
   };
 };
 
+static const MpValue __clean__ = {0};
+
 static void
 _mp_stack_notify (gpointer pvalue)
 {
@@ -179,27 +181,29 @@ _mp_stack_transfer (MpStack* dst, MpStack* src)
 }
 
 gboolean
-_mp_stack_cast (MpStack* stack, int index, const gchar* stype)
+_mp_stack_cast (MpStack* stack, int index, const gchar* dst_)
 {
   g_return_val_if_fail (stack != NULL, FALSE);
   GArray* array = (gpointer) stack;
-  gint type = 0;
+  gint src, dst = 0;
 
   g_return_val_if_fail (index >= 0 && stack->length > index, FALSE);
-  g_return_val_if_fail ((type = _mp_lookup_type (stype)) >= 0, FALSE);
+  g_return_val_if_fail ((dst = _mp_lookup_type (dst_)) >= 0, FALSE);
   MpValue* pmp = & stack->values [index];
   MpValue mp = {0};
 
-  if (pmp->type != type)
+  if (pmp->type != dst)
   {
     mp = *pmp;
-    memset (pmp, 0, sizeof (*pmp));
-    pmp->type = type;
+    src = pmp->type;
 
-    switch (type)
+    *pmp = __clean__;
+    pmp->type = dst;
+
+    switch (dst)
     {
     case MP_TYPE_INTEGER:
-      switch (mp.type)
+      switch (src)
       {
       case MP_TYPE_RATIONAL:
         mpz_init (pmp->integer);
@@ -218,14 +222,14 @@ _mp_stack_cast (MpStack* stack, int index, const gchar* stype)
       default:
         g_warning
         ("Can't cast type %s to %s",
-         __type_table__ [mp.type],
-         __type_table__ [type]);
+         __type_table__ [src],
+         __type_table__ [dst]);
         return FALSE;
         break;
       }
       break;
     case MP_TYPE_RATIONAL:
-      switch (mp.type)
+      switch (src)
       {
       case MP_TYPE_INTEGER:
         mpq_init (pmp->rational);
@@ -240,8 +244,8 @@ _mp_stack_cast (MpStack* stack, int index, const gchar* stype)
       default:
         g_warning
         ("Can't cast type %s to %s",
-         __type_table__ [mp.type],
-         __type_table__ [type]);
+         __type_table__ [src],
+         __type_table__ [dst]);
         return FALSE;
         break;
       }
@@ -250,23 +254,23 @@ _mp_stack_cast (MpStack* stack, int index, const gchar* stype)
       {
         mpfr_rnd_t round = 0;
         round = mpfr_get_default_rounding_mode ();
-        switch (mp.type)
+        switch (src)
         {
         case MP_TYPE_INTEGER:
-          mpfr_init (mp.real);
-          mpfr_set_z (mp.real, pmp->integer, round);
+          mpfr_init (pmp->real);
+          mpfr_set_z (pmp->real, mp.integer, round);
           _mp_stack_notify (&mp);
           break;
         case MP_TYPE_RATIONAL:
-          mpfr_init (mp.real);
-          mpfr_set_q (mp.real, pmp->rational, round);
+          mpfr_init (pmp->real);
+          mpfr_set_q (pmp->real, mp.rational, round);
           _mp_stack_notify (&mp);
           break;
         default:
           g_warning
           ("Can't cast type %s to %s",
-           __type_table__ [mp.type],
-           __type_table__ [type]);
+           __type_table__ [src],
+           __type_table__ [dst]);
           return FALSE;
           break;
         }
@@ -275,8 +279,8 @@ _mp_stack_cast (MpStack* stack, int index, const gchar* stype)
     default:
       g_warning
       ("Can't cast type %s to %s",
-       __type_table__ [mp.type],
-       __type_table__ [type]);
+       __type_table__ [src],
+       __type_table__ [dst]);
       return FALSE;
       break;
     }
