@@ -28,10 +28,12 @@ VOID=
 # - declare
 #
 
-noinst_PROGRAMS=\
-	abaco \
-	abacojit \
-	abacomp \
+pkglib_LTLIBRARIES=\
+	libabaco_jit.la \
+	$(VOID)
+
+pkginclude_HEADERS=\
+	libabaco_jit.h \
 	$(VOID)
 
 #
@@ -39,50 +41,58 @@ noinst_PROGRAMS=\
 # - sources
 #
 
-abaco_SOURCES=\
-	abaco.c \
+libabaco_jit_la_SOURCES=\
+	closure.vala \
+	compilers/base.vala \
+	compilers/x86_64.vala \
+	defaults.vala \
+	jit.vala \
+	reg.vala \
+	relation.vala \
+	types/base.vala \
+	types/function.vala \
+	types/loadable.vala \
+	types/mpq.vala \
+	types/mpz.vala \
+	types/nil.vala \
+	types/number.vala \
 	$(VOID)
-abaco_CFLAGS=\
+libabaco_jit_la_CFLAGS=\
 	$(ABACO_CFLAGS) \
-	$(ABACO_MP_CFLAGS) \
 	$(GLIB_CFLAGS) \
+	$(GMP_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
+	$(MPFR_CFLAGS) \
+	-DG_LOG_DOMAIN=\"AbacoJIT\" \
+	-D__LIBABACO_JIT_INSIDE__=1 \
 	$(VOID)
-abaco_LDADD=\
+libabaco_jit_la_LIBADD=\
 	$(ABACO_LIBS) \
-	$(ABACO_MP_LIBS) \
 	$(GLIB_LIBS) \
+	$(GMP_LIBS) \
 	$(GOBJECT_LIBS) \
+	$(MPFR_LIBS) \
+	$(VOID)
+libabaco_jit_la_LDFLAGS=\
+	-rpath ${pkglibdir} \
+	-version-info 0:0:0 \
 	$(VOID)
 
-abacojit_SOURCES=\
-	abacojit.c \
-	$(VOID)
-abacojit_CFLAGS=\
-	$(ABACO_CFLAGS) \
-	$(ABACO_JIT_CFLAGS) \
-	$(GLIB_CFLAGS) \
-	$(GOBJECT_CFLAGS) \
-	$(VOID)
-abacojit_LDADD=\
-	$(ABACO_LIBS) \
-	$(ABACO_JIT_LIBS) \
-	$(GLIB_LIBS) \
-	$(GOBJECT_LIBS) \
-	$(VOID)
+#
+# Vala
+#
 
-abacomp_SOURCES=\
-	abacomp.c \
-	$(VOID)
-abacomp_CFLAGS=\
-	$(ABACO_CFLAGS) \
-	$(ABACO_MP_CFLAGS) \
-	$(GLIB_CFLAGS) \
-	$(GOBJECT_CFLAGS) \
-	$(VOID)
-abacomp_LDADD=\
-	$(ABACO_LIBS) \
-	$(ABACO_MP_LIBS) \
-	$(GLIB_LIBS) \
-	$(GOBJECT_LIBS) \
+AM_VALAFLAGS=\
+	--vapidir=../abaco/ \
+	--vapidir=vapi/ \
+	--vapi-comments \
+	--hide-internal \
+	--abi-stability \
+	--header libabaco_jit.h \
+	--library libabaco_jit \
+	--pkg config \
+	--pkg bytecode \
+	--pkg libabaco \
+	-D DEBUG=${DEBUG} \
+	-D DEVELOPER=${DEVELOPER} \
 	$(VOID)

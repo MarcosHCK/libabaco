@@ -15,7 +15,35 @@
 # along with libabaco. If not, see <http://www.gnu.org/licenses/>.
 #
 
-SUBDIRS=\
-	abaco \
-	jit \
-	mp
+*.[ao]
+*.la
+*.lai
+*.lo
+*.Po
+*.Plo
+*.Tpo
+
+*.gir
+*.typelib
+.dirstamp
+
+libabaco*.so*
+libabaco*.dll*
+libabaco*.dylib*
+libabaco*.h
+libabaco*.vapi
+
+closure.c
+compilers/base.c
+compilers/x86_64.c
+defaults.c
+jit.c
+reg.c
+relation.c
+types/base.c
+types/function.c
+types/loadable.c
+types/mpq.c
+types/mpz.c
+types/nil.c
+types/number.c

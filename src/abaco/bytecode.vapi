@@ -89,7 +89,7 @@ namespace Abaco.Bytecode
     public uint sbx;
   }
 
-  [CCode (cheader_filename = "bytecode.h", cprefix = "B_OPCODE_")]
+  [CCode (cheader_filename = "bytecode.h", cprefix = "B_OPCODE_", has_type_id = false, cname = "BOpcodeCode")]
   public enum Code
   {
     NOP,
