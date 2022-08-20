@@ -38,12 +38,9 @@ compilers/base.c
 compilers/x86_64.c
 defaults.c
 jit.c
-reg.c
 relation.c
-types/base.c
-types/function.c
-types/loadable.c
-types/mpq.c
-types/mpz.c
-types/nil.c
-types/number.c
+regs/base.c
+regs/function.c
+regs/mpq.c
+regs/mpz.c
+regs/number.c

@@ -16,23 +16,30 @@
  *
  */
 
-namespace Abaco.Types
+namespace Abaco.Regs
 {
-  public sealed class Mpz : Types.Base, Types.Number, Types.Loadable
+  public interface Number : Base
   {
-    public override void init (Abaco.Compilers.Base state, Reg reg)
-    {
-      assert_not_reached ();
-    }
+    public abstract void load (Abaco.Compilers.Base compiler, string expr);
 
-    public override void fini (Abaco.Compilers.Base state, Reg reg)
+    /* public API */
+
+    public static GLib.Type select (string expr)
     {
-      assert_not_reached ();
-    }
-  
-    public void load (Abaco.Compilers.Base state, string symbol, Reg reg)
-    {
-      assert_not_reached ();
+      var ratio = false;
+      for (var ptr = expr; ptr[0] != 0; ptr = ptr.next_char ())
+      {
+        var c = ptr.get_char ();
+        if (c == '.' || c == '/')
+        {
+          ratio = true;
+          break;
+        }
+      }
+
+      if (ratio)
+        return typeof (Regs.Mpq);
+    return typeof (Regs.Mpz);
     }
   }
 }

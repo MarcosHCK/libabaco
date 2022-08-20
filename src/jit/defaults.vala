@@ -21,47 +21,15 @@ namespace Abaco
 {
   internal static void load_default (Jit jit)
   {
-    jit.kloader =
-    (compiler, expr, result) => {
-      var type = GLib.Type.INVALID;
-      var ratio = false;
-
-      for (var ptr = expr; ptr[0] != 0; ptr = ptr.next_char ())
-      {
-        var c = ptr.get_char ();
-        if (c == '.' || c == '/')
-        {
-          ratio = true;
-          break;
-        }
-      }
-
-      if (ratio)
-        type = typeof (Abaco.Types.Mpq);
-      else
-        type = typeof (Abaco.Types.Mpz);
-
-      result.clear (compiler);
-      result.load (compiler, expr, type);
-    };
-
-    jit.floader =
-    (compiler, relation, result) => {
-      var type = typeof (Abaco.Types.Function);
-
-      result.clear (compiler);
-      result.load (compiler, expr, type);
-    };
-
     jit.add_operator
     (new Relation.with_name
      ("+",
       new GLib.Type []
         {
-          typeof (Types.Number),
-          typeof (Types.Number),
+          typeof (Regs.Number),
+          typeof (Regs.Number),
         },
-      typeof (Types.Number),
+      typeof (Regs.Number),
       (compiler, expr, args, result) =>
         {
           assert_not_reached ();

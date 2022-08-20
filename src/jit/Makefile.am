@@ -47,15 +47,12 @@ libabaco_jit_la_SOURCES=\
 	compilers/x86_64.vala \
 	defaults.vala \
 	jit.vala \
-	reg.vala \
 	relation.vala \
-	types/base.vala \
-	types/function.vala \
-	types/loadable.vala \
-	types/mpq.vala \
-	types/mpz.vala \
-	types/nil.vala \
-	types/number.vala \
+	regs/base.vala \
+	regs/function.vala \
+	regs/mpq.vala \
+	regs/mpz.vala \
+	regs/number.vala \
 	$(VOID)
 libabaco_jit_la_CFLAGS=\
 	$(ABACO_CFLAGS) \

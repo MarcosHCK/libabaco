@@ -30,18 +30,8 @@ namespace Abaco
     private Abaco.Rules rules { get; set; }
 
     public JitTargetArch target { get; private set; }
-    public ConstantLoader kloader { get; set; }
-    public FunctionLoader floader { get; set; }
-    public FunctionInvoker invoker { get; set; }
 
-    /* private API */
-
-    [CCode (has_target = false)]
-    public delegate void ConstantLoader (Compilers.Base compiler, string expr, Reg result);
-    [CCode (has_target = false)]
-    public delegate void FunctionLoader (Compilers.Base compiler, Relation relation, Reg result);
-    [CCode (has_target = false)]
-    public delegate void FunctionInvoker (Compilers.Base compiler, Reg[] arguments, Reg result);
+    /* type API */
 
     private class Section
     {
@@ -91,24 +81,51 @@ namespace Abaco
 
     private class StackSection : Section
     {
-      private Reg[] stack;
+      public Regs.Base[] stack { get; private set; }
+      public uint stacksz { get { return head.size; } }
 
       /* public API */
 
-      public unowned Reg? take (uint index)
-        requires (index < stack.length)
+      public void loadk (Compilers.Base state, uint index, string expr)
       {
-        return stack [index];
+        if (index > stacksz)
+          error ("Invalid index");
+        if (stack [index] != null)
+        {
+          stack [index].fini (state);
+          stack [index] = null;
+        }
+
+        var best = Regs.Number.select (expr);
+        var reg = Regs.Base.create (best, index);
+            reg.init (state);
+
+        ((Regs.Number) reg).load (state, expr);
       }
-  
+
+      public void loadf (Compilers.Base state, uint index, string expr)
+      {
+        if (index > stacksz)
+          error ("Invalid index");
+        if (stack [index] != null)
+        {
+          stack [index].fini (state);
+          stack [index] = null;
+        }
+
+        var best = typeof (Regs.Function);
+        var reg = Regs.Base.create (best, index);
+            reg.init (state);
+
+        ((Regs.Function) reg).load (state, expr);
+      }
+
       /* Constructors */
 
       public StackSection (GLib.Bytes code)
       {
         base (Bytecode.SectionType.STACK, code);
-        stack = new Reg [head.size];
-        for (int i = 0; i < stack.length; i++)
-          stack [i] = new Reg (i);
+        this.stack = new Regs.Base [stacksz];
       }
     }
 
@@ -147,48 +164,13 @@ namespace Abaco
       }
     }
 
-    [SimpleType]
-    private struct LoadIterator : uintptr
-    {
-      public void iterate (Relation relation)
-      {
-        unowned var args = (uintptr*) this;
-        unowned var jit = (Jit) args [0];
-        unowned var compiler = (Compilers.Base) args [1];
-        unowned var expr = (string) args [2];
-        unowned var result = (Reg) args [3];
-
-        if (jit == null)
-          return;
-
-        if (relation.matches (expr))
-        {
-          jit.floader (compiler, relation, result);
-          args [0] = (uintptr) null;
-        }
-      }
-    }
-
-    private void load_function (Compilers.Base compiler, string expr, Reg result)
-    {
-      LoadIterator iter;
-      uintptr args [4];
-
-      args [0] = (uintptr) this;
-      args [1] = (uintptr) compiler;
-      args [2] = (uintptr) expr;
-      args [3] = (uintptr) result;
-      iter = (LoadIterator) args;
-      result.clear (compiler);
-
-      relations.@foreach (iter.iterate);
-      if (result.init == false)
-        error ("Unknown expression '%s'", expr);
-    }
+    /* private API */
 
     private Closure? compile (GLib.Bytes code) throws GLib.Error
     {
       var state = (Compilers.Base) null;
+      var stack = new StackSection (code);
+      var strtab = new StrtabSection (code);
 
       switch (target)
       {
@@ -198,9 +180,6 @@ namespace Abaco
       default:
         error ("Unknown architecture %s", target.to_string ());
       }
-
-      var stack = new StackSection (code);
-      var strtab = new StrtabSection (code);
 
       {
         unowned Bytecode.Section* section;
@@ -227,31 +206,28 @@ namespace Abaco
                 {
                 case Bytecode.Code.NOP:
                   break;
-                case Bytecode.Code.MOVE:
-                  {
-                    unowned var dsti = (uint32) opcode.a;
-                    unowned var srci = (uint32) opcode.b;
-                    unowned var dst = stack.take (dsti);
-                    unowned var src = stack.take (srci);
-                    Reg.move (state, dst, src);
-                  }
-                  break;
                 case Bytecode.Code.LOADK:
                   {
-                    unowned var dsti = (uint32) opcode.a;
-                    unowned var srci = (uint32) opcode.bx;
-                    unowned var dst = stack.take (dsti);
+                    unowned var dst = opcode.a;
+                    unowned var srci = opcode.bx;
                     unowned var src = strtab.take (srci);
-                    kloader (state, src, dst);
+                    stack.loadk (state, dst, src);
                   }
                   break;
                 case Bytecode.Code.LOADF:
                   {
-                    unowned var dsti = (uint32) opcode.a;
-                    unowned var srci = (uint32) opcode.bx;
-                    unowned var dst = stack.take (dsti);
+                    unowned var dst = opcode.a;
+                    unowned var srci = opcode.bx;
                     unowned var src = strtab.take (srci);
-                    load_function (state, src, dst);
+                    stack.loadf (state, dst, src);
+                  }
+                  break;
+                case Bytecode.Code.CALL:
+                  {
+                    unowned var dst = opcode.a;
+                    unowned var srci = opcode.b;
+                    unowned var count = opcode.c;
+                    assert_not_reached ();
                   }
                   break;
                 default:
@@ -337,9 +313,6 @@ namespace Abaco
     public Jit.naked (JitTargetArch target)
     {
       base ();
-      kloader = () => { };
-      floader = () => { };
-      invoker = () => { };
     }
 
     public Jit (JitTargetArch target)

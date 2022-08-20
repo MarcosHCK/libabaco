@@ -15,8 +15,6 @@
  * along with libabaco.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-using Abaco.Compilers;
-using Abaco.Types;
 
 namespace Abaco
 {
@@ -94,16 +92,10 @@ namespace Abaco
       this.arguments = arguments;
       this.result = result;
       this.compiler = (owned) compiler;
-
-      foreach (var type in arguments)
-      if (!type.is_a (typeof (Abaco.Types.Base)) && type != typeof (Abaco.Types.Base))
-        error ("Argument must be derived from '%s'", typeof (Abaco.Types.Base).name ());
-      if (!result.is_a (typeof (Abaco.Types.Base)) && result != typeof (Abaco.Types.Base))
-        error ("Argument must be derived from '%s'", typeof (Abaco.Types.Base).name ());
     }
   }
 
-  public delegate void RelationCompiler (Abaco.Compilers.Base compiler, string expr, Reg[] arguments, Reg result);
+  public delegate void RelationCompiler (Abaco.Compilers.Base compiler, string expr, uint[] arguments, uint result);
 
   public static uint relation_hash (Relation self)
   {
