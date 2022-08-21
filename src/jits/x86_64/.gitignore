@@ -15,22 +15,4 @@
 # along with libabaco. If not, see <http://www.gnu.org/licenses/>.
 #
 
-*.[ao]
-*.la
-*.lai
-*.lo
-*.Po
-*.Plo
-*.Tpo
-
-*.gir
-*.typelib
-.dirstamp
-
-libabaco*.so*
-libabaco*.dll*
-libabaco*.dylib*
-libabaco*.h
-libabaco*.vapi
-
-jit.c
+state.c

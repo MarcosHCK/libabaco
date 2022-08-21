@@ -15,10 +15,31 @@
  * along with libabaco.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#ifndef __X86_64_JIT__
+#define __X86_64_JIT__ 1
+#include <libabaco_jit.h>
 
-namespace Abaco.Compilers
-{
-  public abstract class Base
-  {
-  }
+#if !defined(EXPORT)
+# if defined(_MSC_VER)
+#   define EXPORT __declspec(dllexport) extern
+# elif __GNUC__ >= 4
+#   define EXPORT __attribute__((visibility("default"))) extern
+# else // __GNUC__ < 4
+#   define EXPORT extern
+# endif // _MSC_VER
+#endif // EXPORT
+
+#define ABACO_JITS_TYPE_X86_64 (abaco_jits_x86_64_get_type())
+
+#if __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+EXPORT GType
+abaco_jits_x86_64_get_type (void) G_GNUC_CONST;
+
+#if __cplusplus
 }
+#endif // __cplusplus
+
+#endif // __X86_64_JIT__

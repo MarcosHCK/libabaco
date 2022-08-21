@@ -18,6 +18,7 @@
 #include <config.h>
 #include <libabaco.h>
 #include <libabaco_jit.h>
+#include <libabaco_jits.h>
 #include <bytecode.h>
 #include <glib.h>
 
@@ -25,10 +26,122 @@ const gchar* output = NULL;
 const gchar* execute = NULL;
 gboolean benchmark = FALSE;
 
-#define _abaco_closure_unref0(var) ((var == NULL) ? NULL : (var = (abaco_closure_unref (var), NULL)))
+#define _g_closure_unref0(var) ((var == NULL) ? NULL : (var = (g_closure_unref (var), NULL)))
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
 #define _g_error_free0(var) ((var == NULL) ? NULL : (var = (g_error_free (var), NULL)))
 #define _g_free0(var) ((var == NULL) ? NULL : (var = (g_free (var), NULL)))
+
+typedef struct
+{
+  GClosure parent;
+  gpointer main;
+  gpointer block;
+  gsize blocksz;
+  gsize stacksz;
+} _Closure;
+
+static inline void
+do_report (GClosure* closure, const gchar* code)
+{
+  GValue result = {0};
+  GString* buffer = NULL;
+  GError* tmp_err = NULL;
+
+  if (output != NULL)
+  {
+    _Closure* real = NULL;
+    GBytes* dump = NULL;
+    gchar* ptr = NULL;
+    gsize length = 0;
+
+    real = (gpointer) closure;
+    length = real->blocksz;
+    ptr = real->block;
+
+    g_file_set_contents (output, ptr, length, &tmp_err);
+    if (G_UNLIKELY (tmp_err != NULL))
+    {
+      g_critical
+      ("(%s): %s: %i: %s",
+       G_STRLOC,
+       g_quark_to_string
+       (tmp_err->domain),
+       tmp_err->code,
+       tmp_err->message);
+      g_error_free (tmp_err);
+      g_assert_not_reached ();
+    }
+  }
+
+  if (!benchmark)
+  {
+    g_value_init (&result, G_TYPE_STRING);
+    g_closure_invoke (closure, &result, 0, NULL, NULL);
+    g_print ("> '%s' = '%s'\r\n", code, g_value_get_string (&result));
+    g_value_unset (&result);
+  }
+  else
+  {
+    const gdouble spt = (gdouble) CLOCKS_PER_SEC;
+    const gdouble mpt = spt / (gdouble) 1000;
+    const int tries = 100000;
+    const int reps = 10;
+    const gchar* got = NULL;
+    gdouble partial = 0;
+    gchar* last = NULL;
+    clock_t src, dst;
+    int i, j;
+
+    buffer =
+    g_string_sized_new (128);
+    g_value_init (&result, G_TYPE_STRING);
+    g_print ("trying with %i cycles, %i times\r\n", tries, reps);
+
+    for (i = 0; i < reps; i++)
+    {
+      for (j = 0; j < tries; j++)
+      {
+        src = clock ();
+        g_closure_invoke (closure, &result, 0, NULL, NULL);
+        dst = clock ();
+
+        if (j == 0)
+        {
+          partial = (gdouble) (dst - src);
+          last = g_value_dup_string (&result);
+        }
+        else
+        {
+          got = g_value_get_string (&result);
+          if (g_strcmp0 (got, last))
+            g_error ("Results differs");
+
+          _g_free0 (last);
+          last = g_strdup (got);
+
+          partial += (gdouble) (dst - src);
+        }
+
+        g_value_reset (&result);
+      }
+
+      partial /= (reps * tries);
+
+      g_string_append_printf (buffer, "> '%s'", code);
+      g_string_append_printf (buffer, " = '%s'", last);
+      g_string_append_printf (buffer, " (took ");
+      g_string_append_printf (buffer, "%lf ticks, ", partial);
+      g_string_append_printf (buffer, "%lf micros, ", partial / mpt);
+      g_string_append_printf (buffer, "%lf seconds)", partial / spt);
+      g_print ("%.*s\r\n", buffer->len, buffer->str);
+      g_string_truncate (buffer, 0);
+      g_free (last);
+    }
+
+    g_string_free (buffer, TRUE);
+    g_value_unset (&result);
+  }
+}
 
 int
 main (int argc, char* argv [])
@@ -67,8 +180,10 @@ main (int argc, char* argv [])
   }
   else
   {
-    AbacoJit* jit = abaco_jit_new (ABACO_JIT_TARGET_ARCH_x86_64);
-    AbacoClosure* closure = NULL;
+    AbacoJit* jit = abaco_jit_new (ABACO_JITS_TYPE_X86_64);
+    GClosure* closure = NULL;
+  
+    abaco_jits_arithmetics (jit);
 
     if (execute != NULL)
     {
@@ -84,12 +199,12 @@ main (int argc, char* argv [])
          tmp_err->code,
          tmp_err->message);
         _g_error_free0 (tmp_err);
-        _abaco_closure_unref0 (closure);
+        _g_closure_unref0 (closure);
         g_assert_not_reached ();
       }
 
-      g_print ("ok!\r\n");
-      _abaco_closure_unref0 (closure);
+      do_report (closure, execute);
+      _g_closure_unref0 (closure);
     }
     else
     {
@@ -125,12 +240,12 @@ main (int argc, char* argv [])
         tmp_err->code,
         tmp_err->message);
         _g_error_free0 (tmp_err);
-        _abaco_closure_unref0 (closure);
+        _g_closure_unref0 (closure);
         g_assert_not_reached ();
       }
 
-      g_print ("ok!\r\n");
-      _abaco_closure_unref0 (closure);
+      do_report (closure, execute);
+      _g_closure_unref0 (closure);
     }
   }
 return 0;

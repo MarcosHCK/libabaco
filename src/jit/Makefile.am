@@ -42,33 +42,19 @@ pkginclude_HEADERS=\
 #
 
 libabaco_jit_la_SOURCES=\
-	closure.vala \
-	compilers/base.vala \
-	compilers/x86_64.vala \
-	defaults.vala \
 	jit.vala \
-	relation.vala \
-	regs/base.vala \
-	regs/function.vala \
-	regs/mpq.vala \
-	regs/mpz.vala \
-	regs/number.vala \
 	$(VOID)
 libabaco_jit_la_CFLAGS=\
 	$(ABACO_CFLAGS) \
 	$(GLIB_CFLAGS) \
-	$(GMP_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
-	$(MPFR_CFLAGS) \
 	-DG_LOG_DOMAIN=\"AbacoJIT\" \
 	-D__LIBABACO_JIT_INSIDE__=1 \
 	$(VOID)
 libabaco_jit_la_LIBADD=\
 	$(ABACO_LIBS) \
 	$(GLIB_LIBS) \
-	$(GMP_LIBS) \
 	$(GOBJECT_LIBS) \
-	$(MPFR_LIBS) \
 	$(VOID)
 libabaco_jit_la_LDFLAGS=\
 	-rpath ${pkglibdir} \

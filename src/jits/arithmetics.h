@@ -15,25 +15,31 @@
  * along with libabaco.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-using Abaco.Compilers;
+#ifndef __JITS_ARITHMETICS__
+#define __JITS_ARITHMETICS__ 1
+#include <libabaco_jit.h>
 
-namespace Abaco
-{
-  internal static void load_default (Jit jit)
-  {
-    jit.add_operator
-    (new Relation.with_name
-     ("+",
-      new GLib.Type []
-        {
-          typeof (Regs.Number),
-          typeof (Regs.Number),
-        },
-      typeof (Regs.Number),
-      (compiler, expr, args, result) =>
-        {
-          assert_not_reached ();
-        }),
-     false, 2, false);
-  }
+#if !defined(EXPORT)
+# if defined(_MSC_VER)
+#   define EXPORT __declspec(dllexport) extern
+# elif __GNUC__ >= 4
+#   define EXPORT __attribute__((visibility("default"))) extern
+# else // __GNUC__ < 4
+#   define EXPORT extern
+# endif // _MSC_VER
+#endif // EXPORT
+
+#if __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+EXPORT void
+abaco_jits_arithmetics (AbacoJit* state);
+EXPORT void
+abaco_jits_arithmetics_add (AbacoJitState* state, guint index, guint first, guint count);
+
+#if __cplusplus
 }
+#endif // __cplusplus
+
+#endif // __JITS_ARITHMETICS__

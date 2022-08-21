@@ -30,7 +30,3 @@
 libabaco*.so*
 libabaco*.dll*
 libabaco*.dylib*
-libabaco*.h
-libabaco*.vapi
-
-jit.c

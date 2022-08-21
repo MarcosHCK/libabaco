@@ -28,10 +28,13 @@ VOID=
 # - declare
 #
 
-noinst_PROGRAMS=\
-	abaco \
-	abacojit \
-	abacomp \
+pkglib_LTLIBRARIES=\
+	libabaco_jits.la \
+	$(VOID)
+
+pkginclude_HEADERS=\
+	libabaco_jits.h \
+	x86_64/jit.h \
 	$(VOID)
 
 #
@@ -39,52 +42,57 @@ noinst_PROGRAMS=\
 # - sources
 #
 
-abaco_SOURCES=\
-	abaco.c \
-	$(VOID)
-abaco_CFLAGS=\
-	$(ABACO_CFLAGS) \
-	$(ABACO_MP_CFLAGS) \
-	$(GLIB_CFLAGS) \
-	$(GOBJECT_CFLAGS) \
-	$(VOID)
-abaco_LDADD=\
-	$(ABACO_LIBS) \
-	$(ABACO_MP_LIBS) \
-	$(GLIB_LIBS) \
-	$(GOBJECT_LIBS) \
+EXTRA_DIST+=\
+	reg.h \
+	stdlib.h \
+	x86_64/state.h \
 	$(VOID)
 
-abacojit_SOURCES=\
-	abacojit.c \
+libabaco_jits_la_SOURCES=\
+	arithmetics.c \
+	cast.c \
+	reg.c \
+	x86_64/jit.c \
+  x86_64/state.c \
 	$(VOID)
-abacojit_CFLAGS=\
+libabaco_jits_la_CFLAGS=\
 	$(ABACO_CFLAGS) \
 	$(ABACO_JIT_CFLAGS) \
-	$(ABACO_JITS_CFLAGS) \
+  $(DYNASM_CFLAGS) \
 	$(GLIB_CFLAGS) \
+	$(GMP_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
+	$(MPFR_CFLAGS) \
+	-I./ \
+	-D__DASC__=1 \
+	-DG_LOG_DOMAIN=\"AbacoJITS\" \
+  -D__LIBABACO_JIT_INSIDE__=1 \
+	-D__LIBABACO_JITS_INSIDE__=1 \
 	$(VOID)
-abacojit_LDADD=\
+libabaco_jits_la_LIBADD=\
 	$(ABACO_LIBS) \
 	$(ABACO_JIT_LIBS) \
-	$(ABACO_JITS_LIBS) \
+  $(DYNASM_LIBS) \
 	$(GLIB_LIBS) \
+	$(GMP_LIBS) \
 	$(GOBJECT_LIBS) \
+	$(MPFR_LIBS) \
+	$(VOID)
+libabaco_jits_la_LDFLAGS=\
+	-rpath ${pkglibdir} \
+	-version-info 0:0:0 \
 	$(VOID)
 
-abacomp_SOURCES=\
-	abacomp.c \
+#
+# .dasc.c files support
+#
+
+SUFFIXES=.dasc.c .c
+
+AM_DYNASMFLAGS=\
+	-D DEBUG=\"${DEBUG}\" \
+	-D DEVELOPER=\"${DEVELOPER}\" \
 	$(VOID)
-abacomp_CFLAGS=\
-	$(ABACO_CFLAGS) \
-	$(ABACO_MP_CFLAGS) \
-	$(GLIB_CFLAGS) \
-	$(GOBJECT_CFLAGS) \
-	$(VOID)
-abacomp_LDADD=\
-	$(ABACO_LIBS) \
-	$(ABACO_MP_LIBS) \
-	$(GLIB_LIBS) \
-	$(GOBJECT_LIBS) \
-	$(VOID)
+
+.dasc.c.c:
+	$(DYNASM) $(AM_DYNASMFLAGS) -o $@ $<

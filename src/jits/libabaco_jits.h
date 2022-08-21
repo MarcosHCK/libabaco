@@ -15,31 +15,14 @@
  * along with libabaco.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#ifndef __LIBABACO_JITS__
+#define __LIBABACO_JITS__ 1
+#include <libabaco_jit.h>
 
-namespace Abaco.Regs
-{
-  public interface Number : Base
-  {
-    public abstract void load (Abaco.Compilers.Base compiler, string expr);
+/* Common grounds */
+#include <arithmetics.h>
 
-    /* public API */
+/* Archs */
+#include "x86_64/jit.h"
 
-    public static GLib.Type select (string expr)
-    {
-      var ratio = false;
-      for (var ptr = expr; ptr[0] != 0; ptr = ptr.next_char ())
-      {
-        var c = ptr.get_char ();
-        if (c == '.' || c == '/')
-        {
-          ratio = true;
-          break;
-        }
-      }
-
-      if (ratio)
-        return typeof (Regs.Mpq);
-    return typeof (Regs.Mpz);
-    }
-  }
-}
+#endif // __LIBABACO_JITS__

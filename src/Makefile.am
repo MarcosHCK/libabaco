@@ -18,4 +18,5 @@
 SUBDIRS=\
 	abaco \
 	jit \
+	jits \
 	mp
