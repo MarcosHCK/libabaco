@@ -19,48 +19,32 @@
 #include <reg.h>
 
 #define round (mpfr_get_default_rounding_mode ())
-#define move(type, name, from) \
-  type##_t name; \
+#define prepare(reg, tmp, _type) \
   G_STMT_START { \
-    type##_ptr dst = (name); \
-    type##_ptr src = (from); \
-      *dst = *src; \
-  } G_STMT_END
-#define fresh(reg, _type) \
-  G_STMT_START { \
-    *(reg) = __empty__; \
+    tmp = *(reg); \
     (reg)->type = (_type); \
   } G_STMT_END
-
-static const Reg __empty__ = {0};
 
 void
 _jit_cast (Reg* reg, gchar type)
 {
+  Reg tmp;
   switch (reg->type)
   {
   case reg_type_integer:
     switch (type)
     {
-    case reg_type_integer:
-      break;
     case reg_type_rational:
-      {
-        move (mpz, z, reg->integer);
-        fresh (reg, type);
-        mpq_init (reg->rational);
-        mpq_set_z (reg->rational, z);
-        mpz_clear (z);
-      }
+      prepare (reg, tmp, type);
+      mpq_init (reg->rational);
+      mpq_set_z (reg->rational, tmp.integer);
+      mpz_clear (tmp.integer);
       break;
     case reg_type_real:
-      {
-        move (mpz, z, reg->integer);
-        fresh (reg, type);
-        mpfr_init (reg->real);
-        mpfr_set_z (reg->real, z, round);
-        mpz_clear (z);
-      }
+      prepare (reg, tmp, type);
+      mpfr_init (reg->real);
+      mpfr_set_z (reg->real, tmp.integer, round);
+      mpz_clear (tmp.integer);
       break;
     }
     break;
@@ -68,24 +52,16 @@ _jit_cast (Reg* reg, gchar type)
     switch (type)
     {
     case reg_type_integer:
-      {
-        move (mpq, q, reg->rational);
-        fresh (reg, type);
-        mpz_init (reg->integer);
-        mpz_set_q (reg->integer, q);
-        mpq_clear (q);
-      }
-      break;
-    case reg_type_rational:
+      prepare (reg, tmp, type);
+      mpz_init (reg->integer);
+      mpz_set_q (reg->integer, tmp.rational);
+      mpq_clear (tmp.rational);
       break;
     case reg_type_real:
-      {
-        move (mpq, q, reg->rational);
-        fresh (reg, type);
-        mpfr_init (reg->real);
-        mpfr_set_q (reg->real, q, round);
-        mpq_clear (q);
-      }
+      prepare (reg, tmp, type);
+      mpfr_init (reg->real);
+      mpfr_set_q (reg->real, tmp.rational, round);
+      mpq_clear (tmp.rational);
       break;
     }
     break;
@@ -93,24 +69,16 @@ _jit_cast (Reg* reg, gchar type)
     switch (type)
     {
     case reg_type_integer:
-      {
-        move (mpfr, r, reg->real);
-        fresh (reg, type);
-        mpz_init (reg->integer);
-        mpfr_get_z (reg->integer, r, round);
-        mpfr_clear (r);
-      }
+      prepare (reg, tmp, type);
+      mpz_init (reg->integer);
+      mpfr_get_z (reg->integer, tmp.real, round);
+      mpfr_clear (tmp.real);
       break;
     case reg_type_rational:
-      {
-        move (mpfr, r, reg->real);
-        fresh (reg, type);
-        mpq_init (reg->rational);
-        mpfr_get_q (reg->rational, r);
-        mpfr_clear (r);
-      }
-      break;
-    case reg_type_real:
+      prepare (reg, tmp, type);
+      mpq_init (reg->rational);
+      mpfr_get_q (reg->rational, tmp.real);
+      mpfr_clear (tmp.real);
       break;
     }
     break;

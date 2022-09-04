@@ -107,6 +107,45 @@ _jit_clean (Reg* reg)
   reg->type = reg_type_void;
 }
 
+void
+_jit_move (Reg* dst, const Reg* src)
+{
+  if (src->type != dst->type)
+  {
+    _jit_clean (dst);
+    dst->type = src->type;
+    switch (dst->type)
+    {
+    case reg_type_integer:
+      mpz_init (dst->integer);
+      break;
+    case reg_type_rational:
+      mpq_init (dst->rational);
+      break;
+    case reg_type_real:
+      mpfr_init (dst->real);
+      break;
+    }
+  }
+
+  switch (src->type)
+  {
+  case reg_type_pointer:
+    dst->addr = src->addr;
+    break;
+  case reg_type_integer:
+    mpz_set (dst->integer, src->integer);
+    break;
+  case reg_type_rational:
+    mpq_set (dst->rational, src->rational);
+    break;
+  case reg_type_real:
+    mpfr_set (dst->real, src->real,
+      mpfr_get_default_rounding_mode ());
+    break;
+  }
+}
+
 static inline void
 _jit_load_best (Reg* reg, gchar best)
 {
@@ -119,7 +158,7 @@ _jit_load_best (Reg* reg, gchar best)
       mpz_init (reg->integer);
       break;
     case reg_type_rational:
-      mpz_init (reg->integer);
+      mpq_init (reg->rational);
       break;
     default:
       g_error ("(%s): Fix this!", G_STRLOC);

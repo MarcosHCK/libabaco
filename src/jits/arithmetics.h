@@ -35,8 +35,14 @@ extern "C" {
 
 EXPORT void
 abaco_jits_arithmetics (AbacoJit* state);
-EXPORT void
-abaco_jits_arithmetics_add (AbacoJitState* state, guint index, guint first, guint count);
+EXPORT gpointer
+abaco_jits_arithmetics_add (AbacoJitState* state, const gchar* expr);
+EXPORT gpointer
+abaco_jits_arithmetics_sub (AbacoJitState* state, const gchar* expr);
+EXPORT gpointer
+abaco_jits_arithmetics_mul (AbacoJitState* state, const gchar* expr);
+EXPORT gpointer
+abaco_jits_arithmetics_div (AbacoJitState* state, const gchar* expr);
 
 #if __cplusplus
 }

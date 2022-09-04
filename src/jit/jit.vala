@@ -33,11 +33,6 @@ namespace Abaco
 
       /* type API */
 
-      [SimpleType]
-      protected struct Pointer : uint64
-      {
-      }
-
       protected class Section
       {
         private GLib.Bytes code;
@@ -142,6 +137,7 @@ namespace Abaco
 
       /* abstract API */
 
+      public abstract void move (uint index1, uint index2);
       public abstract void load_constant (uint index, string expr);
       public abstract void load_function (uint index, string expr);
       public abstract void call (uint index, uint first, uint args);
@@ -204,7 +200,7 @@ namespace Abaco
       /* type API */
 
       [CCode (has_target = false)]
-      public delegate void Compiler (State state, uint index, uint first, uint count);
+      public delegate void* Compiler (State state, string expr);
 
       /* static API */
 
@@ -288,6 +284,13 @@ namespace Abaco
             switch (opcode.code)
             {
             case Bytecode.Code.NOP:
+              break;
+            case Bytecode.Code.MOVE:
+              {
+                unowned var dst = opcode.a;
+                unowned var src = opcode.b;
+                state.move (dst, src);
+              }
               break;
             case Bytecode.Code.LOADK:
               {

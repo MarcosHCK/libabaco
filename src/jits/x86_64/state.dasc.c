@@ -54,7 +54,6 @@ typedef struct _Record Record;
   ( \
     0 \
     + sizeof (gpointer) /* tmpor */ \
-    + sizeof (gpointer) /* result */ \
     + sizeof (gpointer) /* upslot */ \
   )
 #else // !G_OS_UNIX
@@ -64,7 +63,6 @@ typedef struct _Record Record;
     + sizeof (gpointer) /* rdi */ \
     + sizeof (gpointer) /* rsi */ \
     + sizeof (gpointer) /* tmpor */ \
-    + sizeof (gpointer) /* result */ \
     + sizeof (gpointer) /* upslot */ \
   )
 #endif // G_OS_UNIX
@@ -73,12 +71,11 @@ typedef struct _Record Record;
 |.type Reg, Reg
 |.type Addr, gpointer
 |.define upslot, [rsp+sizeof (gpointer)*0]
-|.define result, [rsp+sizeof (gpointer)*1]
-|.define tmpor_s, [rsp+sizeof (gpointer)*2]
+|.define tmpor_s, [rsp+sizeof (gpointer)*1]
 # ifdef G_OS_UNIX
 # else // !G_OS_UNIX
-|.define rsi_s, [rsp+sizeof (gpointer)*3]
-|.define rdi_s, [rsp+sizeof (gpointer)*4]
+|.define rsi_s, [rsp+sizeof (gpointer)*2]
+|.define rdi_s, [rsp+sizeof (gpointer)*3]
 # endif // G_OS_UNIX
 #endif // __DASC__
 
@@ -120,17 +117,6 @@ struct _AbacoJitsX8664State
   gpointer labels [globl__MAX];
   gsize stacksz;
   guint lastpc;
-
-  guint done : 1;
-
-  struct _Record
-  {
-    gchar type;
-    union
-    {
-      gpointer function;
-    };
-  } *stack;
 };
 
 struct _AbacoJitsX8664StateClass
@@ -139,15 +125,7 @@ struct _AbacoJitsX8664StateClass
   GHashTable* externs;
 };
 
-enum
-{
-  record_type_void = 0,
-  record_type_constant,
-  record_type_function,
-};
-
 G_DEFINE_FINAL_TYPE (AbacoJitsX8664State, abaco_jits_x86_64_state, ABACO_JIT_TYPE_STATE);
-const Record __empty__ = {0};
 
 static int
 _jit_extern (dasm_State** Dst, gpointer addr, guint index, int type)
@@ -192,9 +170,21 @@ abaco_jits_x86_64_state_class_finalize (AbacoJitState* pself)
   _g_hash_table_unref0 (self->intern);
   g_hash_table_remove_all (self->pcs);
   _g_hash_table_unref0 (self->pcs);
-  _g_free0 (self->stack);
   dasm_free (Dst);
 ABACO_JIT_STATE_CLASS (abaco_jits_x86_64_state_parent_class)->finalize (pself);
+}
+
+static void
+abaco_jits_x86_64_state_class_move (AbacoJitState* pself, guint index1, guint index2)
+{
+  AbacoJitsX8664State* self = (gpointer) pself;
+  g_assert (self->stacksz > index1);
+  g_assert (self->stacksz > index2);
+#if __DASC__
+  | slot arg1, (index1)
+  | slot arg2, (index2)
+  | call extern _jit_move
+#endif // __DASC__
 }
 
 static inline void
@@ -323,10 +313,6 @@ abaco_jits_x86_64_state_class_load_constant (AbacoJitState* pself, guint index, 
   else
     loc = GPOINTER_TO_UINT (ploc);
 
-  Record *record = & self->stack [index];
-         *record = __empty__;
-          record->type = record_type_constant;
-
 #if __DASC__
   | slot arg1, (index)
   | lea arg2, [=>(loc)]
@@ -340,6 +326,9 @@ abaco_jits_x86_64_state_class_load_function (AbacoJitState* pself, guint index, 
   AbacoJitsX8664State* self = (gpointer) pself;
   AbacoJitRelationCompiler compiler = NULL;
   AbacoJitRelation* relation = NULL;
+  gpointer lpc = NULL;
+  guint pc = 0;
+
   g_assert (self->stacksz > index);
 
   relation =
@@ -349,11 +338,28 @@ abaco_jits_x86_64_state_class_load_function (AbacoJitState* pself, guint index, 
     g_error ("Unknown relation '%s'", expr);
     g_assert_not_reached ();
   }
-
-  Record *record = & self->stack [index];
-         *record = __empty__;
-          record->function = relation;
-          record->type = record_type_function;
+  else
+  {
+    compiler = abaco_jit_relation_get_compiler (relation);
+    if (G_UNLIKELY (compiler == NULL))
+    {
+      g_error ("Invalid relation '%s'", expr);
+      g_assert_not_reached ();
+    }
+    else
+    {
+      lpc = compiler (pself, expr);
+      pc = GPOINTER_TO_UINT (lpc);
+#if __DASC__
+      | slot arg1, (index)
+      | call extern _jit_clean
+      | lea rax, [=>(pc)]
+      | slot rcx, (index)
+      | mov byte Reg:rcx->type, (reg_type_pointer)
+      | mov qword Reg:rcx->addr, rax
+#endif // __DASC__
+    }
+  }
 }
 
 static void
@@ -362,16 +368,20 @@ abaco_jits_x86_64_state_class_call (AbacoJitState* pself, guint index, guint fir
   AbacoJitsX8664State* self = (gpointer) pself;
   g_assert (self->stacksz > index);
   g_assert (self->stacksz > first);
-  g_assert (self->stacksz > first + count);
+  g_assert (self->stacksz > first + count - 1);
 
-  Record* record = & self->stack [index];
-  g_assert (record->type == record_type_function);
-  AbacoJitRelationCompiler compiler = NULL; 
-  AbacoJitRelation* relation = NULL;
-
-  relation = record->function;
-  compiler = abaco_jit_relation_get_compiler (relation);
-  compiler (pself, index, first, count);
+#if __DASC__
+  | slot rax, (index)
+  | cmp byte Reg:rax->type, (reg_type_pointer)
+  | je >1
+  | call extern _jit_error_call
+  |1:
+  | mov arg1, (index)
+  | mov arg2, (first)
+  | mov arg3, (count)
+  | mov rax, Reg:rax->addr
+  | call rax
+#endif // __DASC__
 }
 
 static void
@@ -415,8 +425,6 @@ _closure_data_free (gpointer pdata, GClosure* pself)
 #endif // G_OS_WINDOWS
 }
 
-typedef gchar* (*Jitted) (guint index, guint first, guint count);
-
 static void
 _closure_marshal (GClosure* closure,
                   GValue* result,
@@ -429,15 +437,33 @@ _closure_marshal (GClosure* closure,
   g_return_if_fail (result != NULL);
   g_return_if_fail (cc->stacksz >= n_params);
 
-  Jitted callback = NULL;
-  gchar* retvalue = NULL;
-  gpointer stack = NULL;
+  gpointer callback = NULL;
+  const gchar* param = NULL;
+  Reg stat [1024 / regsz];
+  Reg* stack = NULL;
+  guint i;
 
   callback = (marshal_data ? marshal_data : cc->main);
-  stack = g_malloc0 (cc->stacksz);
-#if DEVELOPER == 1
-  g_assert (cc->stacksz % regsz == 0);
-#endif // DEVELOPER
+  if (cc->stacksz > G_N_ELEMENTS (stat))
+    stack = g_malloc0 (cc->stacksz * regsz);
+  else
+  {
+    stack = & stat[0];
+#if HAVE_MEMSET
+    memset (stack, 0, cc->stacksz * regsz);
+#else // !HAVE_MEMSET
+    static Reg __empty = {0};
+    for (i = 0; i < cc->stacksz; i++)
+      stack [i] = __empty;
+#endif // HAVE_MEMSET
+  }
+
+  for (i = 0; i < n_params; i++)
+  {
+    param =
+    g_value_get_string (& params[i]);
+    _jit_load (& stack[i], param);
+  }
 
 #ifdef G_OS_UNIX
 # define ARG1 "rdi"
@@ -451,15 +477,16 @@ _closure_marshal (GClosure* closure,
 
   asm
   ("push %%rbp;"
-   "movq %2, %%rbp;"
+   "movq %1, %%rbp;"
    "movq $0, %%" ARG1 ";"
    "movq $0, %%" ARG2 ";"
-   "movq $0, %%" ARG3 ";"
+   "movq %2, %%" ARG3 ";"
    "call *%%rax;"
    "pop %%rbp;"
-   : "=a" (retvalue)
+   :
    : "a" (callback),
-     "r" (stack)
+     "g" (stack),
+     "g" ((guintptr) n_params)
    : "%" ARG1,
      "%" ARG2,
      "%" ARG3);
@@ -468,8 +495,12 @@ _closure_marshal (GClosure* closure,
 #undef ARG2
 #undef ARG3
 
-  g_value_take_string (result, retvalue);
-  g_free (stack);
+  g_value_take_string (result, _jit_save (stack));
+
+  for (i = 0; i < cc->stacksz; i++)
+    _jit_clean (& stack[i]);
+  if (stack != & stat[0])
+    g_free (stack);
 }
 
 static GClosure*
@@ -482,24 +513,6 @@ abaco_jits_x86_64_state_class_finish (AbacoJitState* pself)
   size_t blocksz = 0;
 
 #if __DASC__
-# ifdef G_OS_UNIX
-  | slot rdi, 0
-# else // !G_OS_UNIX
-  | slot rcx, 0
-# endif // G_OS_UNIX
-  | call extern _jit_save
-  | mov result, rax
-  | xor tmpor, tmpor
-  |1:
-  | cmp tmpor, (self->stacksz)
-  | je >2
-  | mov rax, tmpor
-  | slot_d arg1, rax
-  | call extern _jit_clean
-  | inc tmpor
-  | jmp <1
-  |2:
-  | mov rax, result
   | mov tmpor, tmpor_s
 # ifdef G_OS_UNIX
 # else // !G_OS_UNIX
@@ -530,7 +543,7 @@ abaco_jits_x86_64_state_class_finish (AbacoJitState* pself)
   closure = g_closure_new_simple (sizeof (Closure), NULL);
   cclosure = ((Closure*) closure);
   cclosure->main = self->labels [globl_main];
-  cclosure->stacksz = self->stacksz * regsz;
+  cclosure->stacksz = self->stacksz;
   cclosure->block = block;
   cclosure->blocksz = blocksz;
 
@@ -546,11 +559,19 @@ return closure;
 }
 
 static void
+_jit_error_call ()
+{
+  g_error ("Can't call a non-function value");
+  g_assert_not_reached ();
+}
+
+static void
 abaco_jits_x86_64_state_class_init (AbacoJitsX8664StateClass* klass)
 {
   AbacoJitStateClass* oclass = ABACO_JIT_STATE_CLASS (klass);
 
   oclass->finalize = abaco_jits_x86_64_state_class_finalize;
+  oclass->move = abaco_jits_x86_64_state_class_move;
   oclass->load_constant = abaco_jits_x86_64_state_class_load_constant;
   oclass->load_function = abaco_jits_x86_64_state_class_load_function;
   oclass->call = abaco_jits_x86_64_state_class_call;
@@ -559,10 +580,11 @@ abaco_jits_x86_64_state_class_init (AbacoJitsX8664StateClass* klass)
 
   klass->externs = g_hash_table_new (g_str_hash, g_str_equal);
 #define extern(var) G_STRINGIFY (var),var
+  g_hash_table_insert (klass->externs, extern (_jit_error_call));
   g_hash_table_insert (klass->externs, extern (_jit_clean));
+  g_hash_table_insert (klass->externs, extern (_jit_move));
   g_hash_table_insert (klass->externs, extern (_jit_load));
   g_hash_table_insert (klass->externs, extern (_jit_save));
-  g_hash_table_insert (klass->externs, extern (_jit_add));
 #undef extern
 }
 
@@ -603,7 +625,6 @@ abaco_jits_x86_64_state_new (AbacoJit* back, GBytes* code)
   g_return_val_if_fail (code != NULL, NULL);
   self = (gpointer) abaco_jit_state_construct (ABACO_JITS_TYPE_X86_64_STATE, code);
   self->stacksz = abaco_jit_state_stack_section_get_size (self->parent.stack);
-  self->stack = g_malloc0 (sizeof (Record) * self->stacksz);
   self->back = back;
 return (gpointer) self;
 }
@@ -633,21 +654,21 @@ abaco_jits_x86_64_state_getpc (gpointer pself, guint* out_pc, const gchar* key)
   }
 }
 
-/* compilers API */
-
-void
-abaco_jits_x86_64_arithmetics_add (gpointer pself, guint index, guint first, guint count)
+gpointer
+abaco_jits_x86_64_accum_wrap (gpointer pself, const gchar* name, AccumWrap wrap)
 {
   AbacoJitsX8664State* self = pself;
-  const gchar* tag = "symbol::add";
   guint pc = 0;
 
-  if (!abaco_jits_x86_64_state_getpc (self, &pc, tag))
+  if (!abaco_jits_x86_64_state_getpc (self, &pc, name))
   {
     const gsize space = sizeof (gpointer) * 2;
+    const guintptr func = (guintptr) wrap;
 #if __DASC__
     |.symbols
     |=>(pc):
+    | push rbx
+    | mov rbx, qword [>2]
     | sub rsp, (space)
     | mov rax, arg2
     | add rax, arg3
@@ -656,23 +677,22 @@ abaco_jits_x86_64_arithmetics_add (gpointer pself, guint index, guint first, gui
     | mov Addr:rsp[0], arg1
     | mov Addr:rsp[1], rax
     | slot_d tmpor, arg2
+    | call extern _jit_clean
     |1:
     | mov arg1, Addr:rsp[0]
     | mov arg2, tmpor
-    | call extern _jit_add
+    | call rbx
     | add tmpor, (regsz)
     | cmp tmpor, Addr:rsp[1]
     | jne <1
     | add rsp, (space)
+    | pop rbx
     | ret
+    |2:
+    |.dword (func & G_MAXUINT32)
+    |.dword (func >> 32)
     |.code
 #endif // __DASC__
   }
-
-#if __DASC__
-  | mov arg1, (index)
-  | mov arg2, (first)
-  | mov arg3, (count)
-  | call =>(pc)
-#endif // __DASC__
+return GUINT_TO_POINTER (pc);
 }

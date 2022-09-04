@@ -18,6 +18,7 @@
 #ifndef __X86_64_JIT_STATE__
 #define __X86_64_JIT_STATE__ 1
 #include <libabaco_jit.h>
+#include <reg.h>
 
 #define ABACO_JITS_TYPE_X86_64_STATE (abaco_jits_x86_64_state_get_type ())
 typedef struct _Closure Closure;
@@ -35,8 +36,10 @@ struct _Closure
   gsize stacksz;
 };
 
+typedef void (*AccumWrap) (Reg* accum, const Reg* next);
+
 /*
- * state.c
+ * internal API
  *
  */
 
@@ -46,8 +49,8 @@ G_GNUC_INTERNAL AbacoJitState*
 abaco_jits_x86_64_state_new (AbacoJit* back, GBytes* code);
 G_GNUC_INTERNAL gboolean
 abaco_jits_x86_64_state_getpc (gpointer pself, guint* out_pc, const gchar* key);
-G_GNUC_INTERNAL void
-abaco_jits_x86_64_arithmetics_add (gpointer pself, guint index, guint first, guint count);
+G_GNUC_INTERNAL gpointer
+abaco_jits_x86_64_accum_wrap (gpointer pself, const gchar* name, AccumWrap wrap);
 
 #if __cplusplus
 }

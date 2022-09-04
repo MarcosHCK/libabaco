@@ -39,14 +39,19 @@ struct _Reg
 
   union
   {
-    gchar type;
+    struct
+    {
+      guchar type;
+      guchar shadow : 1;
+    };
+
     gpointer padding;
   };
 };
 
 enum
 {
-  reg_type_void,
+  reg_type_void = 0,
   reg_type_pointer,
   reg_type_integer,
   reg_type_rational,
@@ -65,12 +70,11 @@ _jit_cast (Reg* reg, gchar type);
 G_GNUC_INTERNAL void
 _jit_clean (Reg* reg);
 G_GNUC_INTERNAL void
+_jit_move (Reg* reg1, const Reg* reg2);
+G_GNUC_INTERNAL void
 _jit_load (Reg* reg, const gchar* expr);
 G_GNUC_INTERNAL gchar*
 _jit_save (Reg* reg);
-
-G_GNUC_INTERNAL void
-_jit_add (Reg* accum, const Reg* next);
 
 #if __cplusplus
 }
