@@ -84,90 +84,13 @@ _jit_load_dot (mpq_t q, const gchar* expr, const gchar* val)
 void
 _jit_clean (Reg* reg)
 {
-  switch (reg->type)
-  {
-  case reg_type_void:
-  case reg_type_pointer:
-    break;
-  case reg_type_integer:
-    mpz_clear (reg->integer);
-    break;
-  case reg_type_rational:
-    mpq_clear (reg->rational);
-    break;
-  case reg_type_real:
-    mpfr_clear (reg->real);
-    break;
-  default:
-    g_error ("Unknown type %i", reg->type);
-    g_assert_not_reached ();
-    break;
-  }
-
-  reg->type = reg_type_void;
+  ucl_reg_clear (reg);
 }
 
 void
 _jit_move (Reg* dst, const Reg* src)
 {
-  if (src->type != dst->type)
-  {
-    _jit_clean (dst);
-    dst->type = src->type;
-    switch (dst->type)
-    {
-    case reg_type_integer:
-      mpz_init (dst->integer);
-      break;
-    case reg_type_rational:
-      mpq_init (dst->rational);
-      break;
-    case reg_type_real:
-      mpfr_init (dst->real);
-      break;
-    }
-  }
-
-  switch (src->type)
-  {
-  case reg_type_pointer:
-    dst->addr = src->addr;
-    break;
-  case reg_type_integer:
-    mpz_set (dst->integer, src->integer);
-    break;
-  case reg_type_rational:
-    mpq_set (dst->rational, src->rational);
-    break;
-  case reg_type_real:
-    mpfr_set (dst->real, src->real,
-      mpfr_get_default_rounding_mode ());
-    break;
-  }
-}
-
-static inline void
-_jit_load_best (Reg* reg, gchar best)
-{
-  if (reg->type != best)
-  {
-    _jit_clean (reg);
-    switch (best)
-    {
-    case reg_type_integer:
-      mpz_init (reg->integer);
-      break;
-    case reg_type_rational:
-      mpq_init (reg->rational);
-      break;
-    default:
-      g_error ("(%s): Fix this!", G_STRLOC);
-      g_assert_not_reached ();
-      break;
-    }
-
-    reg->type = best;
-  }
+  ucl_reg_copy (dst, src);
 }
 
 void
@@ -183,15 +106,15 @@ _jit_load (Reg* reg, const gchar* expr)
     switch (*val)
     {
     case 0:
-      _jit_load_best (reg, reg_type_integer);
+      ucl_reg_setup (reg, UCL_REG_TYPE_INTEGER);
       mpz_set_str (reg->integer, expr, 10);
       return;
     case '.':
-      _jit_load_best (reg, reg_type_rational);
+      ucl_reg_setup (reg, UCL_REG_TYPE_RATIONAL);
       _jit_load_dot (reg->rational, expr, val);
       return;
     case '/':
-      _jit_load_best (reg, reg_type_rational);
+      ucl_reg_setup (reg, UCL_REG_TYPE_RATIONAL);
       mpq_set_str (reg->rational, expr, 10);
       mpq_canonicalize (reg->rational);
       return;
@@ -209,19 +132,19 @@ _jit_save (Reg* reg)
 
   switch (reg->type)
   {
-  case reg_type_integer:
+  case UCL_REG_TYPE_INTEGER:
     length = 2;
     length += mpz_sizeinbase (reg->integer, 10);
     result = g_malloc (length);
     result = mpz_get_str (result, 10, reg->integer);
     break;
-  case reg_type_rational:
+  case UCL_REG_TYPE_RATIONAL:
     length = 3;
     length += mpz_sizeinbase (mpq_numref (reg->rational), 10);
     length += mpz_sizeinbase (mpq_denref (reg->rational), 10);
     result = mpq_get_str (g_malloc (length), 10, reg->rational);
     break;
-  case reg_type_real:
+  case UCL_REG_TYPE_REAL:
     {
       mpfr_exp_t exp;
       mpfr_rnd_t mode;

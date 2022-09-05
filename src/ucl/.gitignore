@@ -15,9 +15,18 @@
 # along with libabaco. If not, see <http://www.gnu.org/licenses/>.
 #
 
-SUBDIRS=\
-	abaco \
-	ucl \
-	mp \
-	jit \
-	jits
+*.[ao]
+*.la
+*.lai
+*.lo
+*.Po
+*.Plo
+*.Tpo
+
+*.gir
+*.typelib
+.dirstamp
+
+libabaco*.so*
+libabaco*.dll*
+libabaco*.dylib*

@@ -16,6 +16,7 @@
  *
  */
 #include <config.h>
+#include <libabaco_ucl.h>
 #include <internal.h>
 
 int
@@ -29,9 +30,14 @@ g_error ("Incompatible Virtual Machine");
     g_error ("Bad argument #0 (integer, rational or real expected, got %s)",
       abaco_mp_typename (mp, 0));
 
-  abaco_mp_pushdouble (mp, 0.5);
-  abaco_vm_exchange (vm, 1);
-return abaco_mp_power_pow (vm);
+  abaco_mp_pushstring (mp, "1/2", 10);
+  abaco_vm_insert (vm, 0);
+
+  UclReg* accum = (UclReg*) abaco_mp_tointeger (mp, 0);
+  UclReg* next = (UclReg*) abaco_mp_tointeger (mp, 1);
+  ucl_power_pow (accum, next);
+  abaco_vm_pop (vm);
+return 1;
 }
 
 int
@@ -46,91 +52,13 @@ g_error ("Incompatible Virtual Machine");
       abaco_mp_typename (mp, 0));
 
   abaco_mp_pushstring (mp, "1/3", 10);
-  abaco_vm_exchange (vm, 1);
-return abaco_mp_power_pow (vm);
-}
+  abaco_vm_insert (vm, 0);
 
-static inline void
-_mp_pow_z (AbacoVM* vm, mpz_ptr expo)
-{
-  AbacoMP* mp = (AbacoMP*) (gpointer) vm;
-  const gchar* basetype = abaco_mp_typename (mp, 1);
-
-  if (mpz_fits_uint_p (expo))
-  {
-    unsigned int value = mpz_get_ui (expo);
-    if (basetype == MP_TYPE_INTEGER)
-    {
-      mpz_ptr base = abaco_mp_tointeger (mp, 0);
-      mpz_pow_ui (base, base, value);
-    } else
-    if (basetype == MP_TYPE_RATIONAL)
-    {
-      mpq_ptr base = abaco_mp_torational (mp, 0);
-      mpz_ptr num = mpq_numref (base);
-      mpz_ptr den = mpq_denref (base);
-
-      mpz_pow_ui (num, num, value);
-      mpz_pow_ui (den, den, value);
-    } else
-    if (basetype == MP_TYPE_REAL)
-    {
-      mpfr_ptr base = abaco_mp_toreal (mp, 0);
-      mpfr_rnd_t round = mpfr_get_default_rounding_mode ();
-      mpfr_pow_ui (base, base, value, round);
-    }
-    else
-    {
-      g_error ("Fix this!");
-      g_assert_not_reached ();
-    }
-  }
-  else
-  {
-    mpfr_rnd_t round;
-    if (basetype == MP_TYPE_INTEGER)
-    {
-      mpfr_t b;
-      mpz_ptr base;
-
-      base = abaco_mp_tointeger (mp, 0);
-      round = mpfr_get_default_rounding_mode ();
-
-      mpfr_init (b);
-      mpfr_set_z (b, base, round);
-      mpfr_pow_z (b, b, expo, round);
-      mpfr_get_z (base, b, round);
-      mpfr_clear (b);
-    }
-    else
-    if (basetype == MP_TYPE_RATIONAL)
-    {
-      mpfr_t b;
-      mpq_ptr base;
-
-      base = abaco_mp_torational (mp, 0);
-      round = mpfr_get_default_rounding_mode ();
-
-      mpfr_init (b);
-      mpfr_set_q (b, base, round);
-      mpfr_pow_z (b, b, expo, round);
-      mpfr_get_q (base, b);
-      mpfr_clear (b);
-    }
-    else
-    if (basetype == MP_TYPE_REAL)
-    {
-      mpfr_ptr base;
-      base = abaco_mp_toreal (mp, 0);
-      round = mpfr_get_default_rounding_mode ();
-      mpfr_pow_z (base, base, expo, round);
-    }
-    else
-    {
-      g_error ("Fix this!");
-      g_assert_not_reached ();
-    }
-  }
+  UclReg* accum = (UclReg*) abaco_mp_tointeger (mp, 0);
+  UclReg* next = (UclReg*) abaco_mp_tointeger (mp, 1);
+  ucl_power_pow (accum, next);
+  abaco_vm_pop (vm);
+return 1;
 }
 
 int
@@ -147,58 +75,8 @@ g_error ("Incompatible Virtual Machine");
     g_error ("Bad argument #1 (integer, rational or real expected, got %s)",
       abaco_mp_typename (mp, 1));
 
-  const gchar* basetype = abaco_mp_typename (mp, 0);
-  const gchar* expotype = abaco_mp_typename (mp, 1);
-
-  if (expotype == MP_TYPE_INTEGER)
-  {
-    mpz_ptr expo = abaco_mp_tointeger (mp, 1);
-    _mp_pow_z (vm, expo);
-    abaco_vm_settop (vm, 1);
-  }
-  else
-  if (expotype == MP_TYPE_RATIONAL)
-  {
-    mpfr_rnd_t round;
-    mpfr_ptr base;
-    mpq_ptr expo;
-    mpfr_t e;
-
-    if (!abaco_mp_cast (mp, 0, MP_TYPE_REAL))
-      g_error ("Can't cast base to real");
-
-    round = mpfr_get_default_rounding_mode ();
-    expo = abaco_mp_torational (mp, 1);
-    base = abaco_mp_toreal (mp, 0);
-
-    mpfr_init (e);
-    mpfr_set_q (e, expo, round);
-    mpfr_pow (base, base, e, round);
-    mpfr_clear (e);
-
-    abaco_vm_settop (vm, 1);
-  }
-  else
-  if (expotype == MP_TYPE_REAL)
-  {
-    mpfr_rnd_t round;
-    mpfr_ptr base;
-    mpfr_ptr expo;
-
-    if (!abaco_mp_cast (mp, 0, MP_TYPE_REAL))
-      g_error ("Can't cast base to real");
-
-    round = mpfr_get_default_rounding_mode ();
-    expo = abaco_mp_toreal (mp, 1);
-    base = abaco_mp_toreal (mp, 0);
-
-    mpfr_pow (base, base, expo, round);
-    abaco_vm_settop (vm, 1);
-  }
-  else
-  {
-    g_error ("Fix this!");
-    g_assert_not_reached ();
-  }
+  UclReg* base = (UclReg*) abaco_mp_tointeger (mp, 0);
+  UclReg* exp = (UclReg*) abaco_mp_tointeger (mp, 1);
+  ucl_power_pow (exp, base);
 return 1;
 }

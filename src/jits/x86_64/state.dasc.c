@@ -49,34 +49,16 @@ extern const gchar** extern_names;
 
 typedef struct _Record Record;
 
-#ifdef G_OS_UNIX
-# define stacksz_r \
+#define stacksz_r \
   ( \
     0 \
-    + sizeof (gpointer) /* tmpor */ \
     + sizeof (gpointer) /* upslot */ \
   )
-#else // !G_OS_UNIX
-# define stacksz_r \
-  ( \
-    0 \
-    + sizeof (gpointer) /* rdi */ \
-    + sizeof (gpointer) /* rsi */ \
-    + sizeof (gpointer) /* tmpor */ \
-    + sizeof (gpointer) /* upslot */ \
-  )
-#endif // G_OS_UNIX
 
 #if __DASC__
 |.type Reg, Reg
 |.type Addr, gpointer
-|.define upslot, [rsp+sizeof (gpointer)*0]
-|.define tmpor_s, [rsp+sizeof (gpointer)*1]
-# ifdef G_OS_UNIX
-# else // !G_OS_UNIX
-|.define rsi_s, [rsp+sizeof (gpointer)*2]
-|.define rdi_s, [rsp+sizeof (gpointer)*3]
-# endif // G_OS_UNIX
+|.define upslot, [rsp+(sizeof(gpointer)*0)]
 #endif // __DASC__
 
 #if __DASC__
@@ -84,14 +66,14 @@ typedef struct _Record Record;
 | lea reg, Reg:rbp[n]
 |.endmacro
 |.macro slot_d, reg, index
-| imul index, (regsz)
-| lea reg, [rbp+index]
+| mov reg, index
+| imul reg, (regsz)
+| lea reg, [rbp+reg]
 |.endmacro
 |
 |.define arg1, rdi
 |.define arg2, rsi
 |.define arg3, r8
-|.define tmpor, r13
 #endif // __DASC__
 
 #define ABACO_JITS_TYPE_X86_64_STATE (abaco_jits_x86_64_state_get_type ())
@@ -355,8 +337,8 @@ abaco_jits_x86_64_state_class_load_function (AbacoJitState* pself, guint index, 
       | call extern _jit_clean
       | lea rax, [=>(pc)]
       | slot rcx, (index)
-      | mov byte Reg:rcx->type, (reg_type_pointer)
-      | mov qword Reg:rcx->addr, rax
+      | mov byte Reg:rcx->type, (UCL_REG_TYPE_POINTER)
+      | mov qword Reg:rcx->pointer, rax
 #endif // __DASC__
     }
   }
@@ -372,14 +354,14 @@ abaco_jits_x86_64_state_class_call (AbacoJitState* pself, guint index, guint fir
 
 #if __DASC__
   | slot rax, (index)
-  | cmp byte Reg:rax->type, (reg_type_pointer)
+  | cmp byte Reg:rax->type, (UCL_REG_TYPE_POINTER)
   | je >1
   | call extern _jit_error_call
   |1:
   | mov arg1, (index)
   | mov arg2, (first)
   | mov arg3, (count)
-  | mov rax, Reg:rax->addr
+  | mov rax, Reg:rax->pointer
   | call rax
 #endif // __DASC__
 }
@@ -402,6 +384,10 @@ abaco_jits_x86_64_state_class_ret (AbacoJitState* pself, guint index)
   | slot_d arg1, rax
   | call extern _jit_clean
   | mov rax, upslot
+#ifndef G_OS_UNIX
+  | push rsi
+  | push rdi
+#endif // G_OS_UNIX
   | slot_d rdi, rax
   | slot rsi, (index)
   | mov rcx, (dwords)
@@ -411,6 +397,10 @@ abaco_jits_x86_64_state_class_ret (AbacoJitState* pself, guint index)
   | dec rcx
   | jnz <1
   |2:
+#ifndef G_OS_UNIX
+  | pop rsi
+  | pop rdi
+#endif // G_OS_UNIX
 #endif // __DASC__
 }
 
@@ -496,9 +486,7 @@ _closure_marshal (GClosure* closure,
 #undef ARG3
 
   g_value_take_string (result, _jit_save (stack));
-
-  for (i = 0; i < cc->stacksz; i++)
-    _jit_clean (& stack[i]);
+  ucl_reg_clears (stack, cc->stacksz);
   if (stack != & stat[0])
     g_free (stack);
 }
@@ -513,12 +501,6 @@ abaco_jits_x86_64_state_class_finish (AbacoJitState* pself)
   size_t blocksz = 0;
 
 #if __DASC__
-  | mov tmpor, tmpor_s
-# ifdef G_OS_UNIX
-# else // !G_OS_UNIX
-  | mov rdi, rdi_s
-  | mov rsi, rsi_s
-# endif // G_OS_UNIX
   | add rsp, (stacksz_r)
   | ret
 #endif // __DASC__
@@ -561,7 +543,17 @@ return closure;
 static void
 _jit_error_call ()
 {
-  g_error ("Can't call a non-function value");
+  g_error ("Attempt to call a non-function value");
+  g_assert_not_reached ();
+}
+
+static void
+_jit_error_nargs (guint got, guint expected)
+{
+  g_error
+  ("Too %s arguments, expected %i, got %i",
+   (got > expected) ? "many" : "few",
+   expected, got);
   g_assert_not_reached ();
 }
 
@@ -581,6 +573,7 @@ abaco_jits_x86_64_state_class_init (AbacoJitsX8664StateClass* klass)
   klass->externs = g_hash_table_new (g_str_hash, g_str_equal);
 #define extern(var) G_STRINGIFY (var),var
   g_hash_table_insert (klass->externs, extern (_jit_error_call));
+  g_hash_table_insert (klass->externs, extern (_jit_error_nargs));
   g_hash_table_insert (klass->externs, extern (_jit_clean));
   g_hash_table_insert (klass->externs, extern (_jit_move));
   g_hash_table_insert (klass->externs, extern (_jit_load));
@@ -604,13 +597,10 @@ abaco_jits_x86_64_state_init (AbacoJitsX8664State* self)
   |.code
   |->main:
   | sub rsp, (stacksz_r)
-  | mov tmpor_s, tmpor
 # ifdef G_OS_UNIX
   | mov upslot, rdi
 # else // !G_OS_UNIX
   | mov upslot, rcx
-  | mov rsi_s, rsi
-  | mov rdi_s, rdi
 # endif // G_OS_UNIX
 #endif // __DASC__
 }
@@ -655,40 +645,45 @@ abaco_jits_x86_64_state_getpc (gpointer pself, guint* out_pc, const gchar* key)
 }
 
 gpointer
-abaco_jits_x86_64_accum_wrap (gpointer pself, const gchar* name, AccumWrap wrap)
+abaco_jits_x86_64_accum_wrap (gpointer pself, const gchar* name, gboolean invert, AccumWrap wrap)
 {
   AbacoJitsX8664State* self = pself;
   guint pc = 0;
 
   if (!abaco_jits_x86_64_state_getpc (self, &pc, name))
   {
-    const gsize space = sizeof (gpointer) * 2;
-    const guintptr func = (guintptr) wrap;
+    const gsize space = sizeof (gpointer) * 4;
+    const guintptr func = GUINT64_TO_LE ((guintptr) wrap);
 #if __DASC__
     |.symbols
     |=>(pc):
-    | push rbx
-    | mov rbx, qword [>2]
     | sub rsp, (space)
-    | mov rax, arg2
-    | add rax, arg3
-    | slot_d rax, rax
+    | mov Addr:rsp [0], r12
+    | mov Addr:rsp [1], r13
+    | mov Addr:rsp [2], r14
+    | mov Addr:rsp [3], rbx
+    | mov rbx, qword [>1]
     | slot_d arg1, arg1
-    | mov Addr:rsp[0], arg1
-    | mov Addr:rsp[1], rax
-    | slot_d tmpor, arg2
+    | mov r12, arg1
+    | slot_d r13, arg2
+    | mov r14, arg2
+    | add r14, arg3
+    | slot_d r14, r14
     | call extern _jit_clean
-    |1:
-    | mov arg1, Addr:rsp[0]
-    | mov arg2, tmpor
-    | call rbx
-    | add tmpor, (regsz)
-    | cmp tmpor, Addr:rsp[1]
-    | jne <1
-    | add rsp, (space)
-    | pop rbx
-    | ret
     |2:
+    | mov arg1, r12
+    | mov arg2, r13
+    | call rbx
+    | add r13, (regsz)
+    | cmp r13, r14
+    | jne <2
+    | mov r12, Addr:rsp [0]
+    | mov r13, Addr:rsp [1]
+    | mov r14, Addr:rsp [2]
+    | mov rbx, Addr:rsp [3]
+    | add rsp, (space)
+    | ret
+    |1:
     |.dword (func & G_MAXUINT32)
     |.dword (func >> 32)
     |.code

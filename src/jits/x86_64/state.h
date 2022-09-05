@@ -50,7 +50,7 @@ abaco_jits_x86_64_state_new (AbacoJit* back, GBytes* code);
 G_GNUC_INTERNAL gboolean
 abaco_jits_x86_64_state_getpc (gpointer pself, guint* out_pc, const gchar* key);
 G_GNUC_INTERNAL gpointer
-abaco_jits_x86_64_accum_wrap (gpointer pself, const gchar* name, AccumWrap wrap);
+abaco_jits_x86_64_accum_wrap (gpointer pself, const gchar* name, gboolean invert, AccumWrap wrap);
 
 #if __cplusplus
 }

@@ -18,45 +18,14 @@
 #ifndef __JITS_REG__
 #define __JITS_REG__ 1
 #include <libabaco_jit.h>
-#include <mpfr.h>
+#include <libabaco_ucl.h>
 
-#define regsz (sizeof (Reg))
-typedef struct _Reg Reg;
+#define regsz (sizeof (UclReg))
+typedef struct _UclReg Reg;
 
 #if __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-struct _Reg
-{
-  union
-  {
-    gpointer addr;
-    mpz_t integer;
-    mpq_t rational;
-    mpfr_t real;
-  };
-
-  union
-  {
-    struct
-    {
-      guchar type;
-      guchar shadow : 1;
-    };
-
-    gpointer padding;
-  };
-};
-
-enum
-{
-  reg_type_void = 0,
-  reg_type_pointer,
-  reg_type_integer,
-  reg_type_rational,
-  reg_type_real,
-};
 
 /* internal API */
 

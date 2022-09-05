@@ -29,12 +29,11 @@ VOID=
 #
 
 pkglib_LTLIBRARIES=\
-	libabaco_jits.la \
+	libabaco_ucl.la \
 	$(VOID)
 
 pkginclude_HEADERS=\
-	libabaco_jits.h \
-	x86_64/jit.h \
+	libabaco_ucl.h \
 	$(VOID)
 
 #
@@ -42,57 +41,24 @@ pkginclude_HEADERS=\
 # - sources
 #
 
-EXTRA_DIST+=\
-	reg.h \
-	x86_64/state.h \
+libabaco_ucl_la_SOURCES=\
+	arithmetic.c \
+	power.c \
+	unified.c \
 	$(VOID)
-
-libabaco_jits_la_SOURCES=\
-	calcs.c \
-	reg.c \
-	x86_64/jit.c \
-  x86_64/state.c \
-	$(VOID)
-libabaco_jits_la_CFLAGS=\
-	$(ABACO_CFLAGS) \
-	$(ABACO_JIT_CFLAGS) \
-	$(ABACO_UCL_CFLAGS) \
-  $(DYNASM_CFLAGS) \
+libabaco_ucl_la_CFLAGS=\
 	$(GLIB_CFLAGS) \
-	$(GMP_CFLAGS) \
-	$(GOBJECT_CFLAGS) \
-	$(MPFR_CFLAGS) \
-	-I./ \
-	-D__DASC__=1 \
-	-DG_LOG_DOMAIN=\"AbacoJITS\" \
-  -D__LIBABACO_JIT_INSIDE__=1 \
-	-D__LIBABACO_JITS_INSIDE__=1 \
+  $(GMP_CFLAGS) \
+  $(MPFR_CFLAGS) \
+	-DG_LOG_DOMAIN=\"AbacoUCL\" \
+	-D__LIBABACO_UCL_INSIDE__=1 \
 	$(VOID)
-libabaco_jits_la_LIBADD=\
-	$(ABACO_LIBS) \
-	$(ABACO_JIT_LIBS) \
-	$(ABACO_UCL_LIBS) \
-  $(DYNASM_LIBS) \
+libabaco_ucl_la_LIBADD=\
 	$(GLIB_LIBS) \
-	$(GMP_LIBS) \
-	$(GOBJECT_LIBS) \
-	$(MPFR_LIBS) \
+  $(GMP_LIBS) \
+  $(MPFR_LIBS) \
 	$(VOID)
-libabaco_jits_la_LDFLAGS=\
+libabaco_ucl_la_LDFLAGS=\
 	-rpath ${pkglibdir} \
 	-version-info 0:0:0 \
 	$(VOID)
-
-#
-# .dasc.c files support
-#
-
-SUFFIXES=.dasc.c .c
-
-AM_DYNASMFLAGS=\
-	-D DEBUG=\"${DEBUG}\" \
-	-D DEVELOPER=\"${DEVELOPER}\" \
-	$(VOID)
-
-.dasc.c.c:
-	$(DYNASM) $(AM_DYNASMFLAGS) -o $@ $<

@@ -19,10 +19,44 @@
 #define __LIBABACO_JITS__ 1
 #include <libabaco_jit.h>
 
-/* Common grounds */
-#include <arithmetics.h>
+#if !defined(JITS_EXPORT)
+# if defined(_MSC_VER)
+#   define JITS_EXPORT __declspec(dllexport) extern
+# elif __GNUC__ >= 4
+#   define JITS_EXPORT __attribute__((visibility("default"))) extern
+# else // __GNUC__ < 4
+#   define JITS_EXPORT extern
+# endif // _MSC_VER
+#endif // JITS_EXPORT
 
 /* Archs */
 #include "x86_64/jit.h"
+
+#if __cplusplus
+extern "C" {
+#endif // 
+
+JITS_EXPORT void
+abaco_jits_arithmetic (AbacoJit* state);
+JITS_EXPORT gpointer
+abaco_jits_arithmetic_add (AbacoJitState* state, const gchar* expr);
+JITS_EXPORT gpointer
+abaco_jits_arithmetic_sub (AbacoJitState* state, const gchar* expr);
+JITS_EXPORT gpointer
+abaco_jits_arithmetic_mul (AbacoJitState* state, const gchar* expr);
+JITS_EXPORT gpointer
+abaco_jits_arithmetic_div (AbacoJitState* state, const gchar* expr);
+JITS_EXPORT void
+abaco_jits_power (AbacoJit* jit);
+JITS_EXPORT gpointer
+abaco_jits_arithmetic_sqrt (AbacoJitState* state, const gchar* expr);
+JITS_EXPORT gpointer
+abaco_jits_arithmetic_cbrt (AbacoJitState* state, const gchar* expr);
+JITS_EXPORT gpointer
+abaco_jits_arithmetic_pow (AbacoJitState* state, const gchar* expr);
+
+#if __cplusplus
+}
+#endif // __cplusplus
 
 #endif // __LIBABACO_JITS__

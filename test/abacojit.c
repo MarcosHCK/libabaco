@@ -183,7 +183,8 @@ main (int argc, char* argv [])
     AbacoJit* jit = abaco_jit_new (ABACO_JITS_TYPE_X86_64);
     GClosure* closure = NULL;
   
-    abaco_jits_arithmetics (jit);
+    abaco_jits_arithmetic (jit);
+    abaco_jits_power (jit);
 
     if (execute != NULL)
     {

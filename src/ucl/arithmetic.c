@@ -16,62 +16,36 @@
  *
  */
 #include <config.h>
-#include <arithmetics.h>
-#include <x86_64/state.h>
-#include <reg.h>
+#include <libabaco_ucl.h>
 
-void
-abaco_jits_arithmetics (AbacoJit* jit)
-{
-  AbacoJitRelation* relation = NULL;
-
-  relation = abaco_jit_relation_new (abaco_jits_arithmetics_add);
-             abaco_jit_relation_set_name (relation, "+");
-  abaco_jit_add_operator (jit, relation, FALSE, 2, FALSE);
-
-  relation = abaco_jit_relation_new (abaco_jits_arithmetics_sub);
-             abaco_jit_relation_set_name (relation, "-");
-  abaco_jit_add_operator (jit, relation, FALSE, 2, FALSE);
-
-  relation = abaco_jit_relation_new (abaco_jits_arithmetics_mul);
-             abaco_jit_relation_set_name (relation, "*");
-  abaco_jit_add_operator (jit, relation, FALSE, 3, FALSE);
-
-  relation = abaco_jit_relation_new (abaco_jits_arithmetics_div);
-             abaco_jit_relation_set_name (relation, "/");
-  abaco_jit_add_operator (jit, relation, FALSE, 3, FALSE);
-}
-
-#define round (mpfr_get_default_rounding_mode ())
-static const Reg __empty__ = {0};
 #define fresh(reg, _type) \
   G_STMT_START { \
-    *(reg) = __empty__; \
-    (reg)->type = (_type); \
+    UclReg* __reg = (reg); \
+    ucl_reg_clear (__reg); \
+    __reg->type = (_type); \
   } G_STMT_END
 
-#define simple_wraps(suffix, inner) \
-static void \
-_jit_##suffix (Reg* accum, const Reg* next) \
+#define round (mpfr_get_default_rounding_mode ())
+
+#define simple(suffix) \
+void \
+ucl_arithmetic_##suffix (UclReg* accum, const UclReg* next) \
 { \
-  if (accum->type == reg_type_void) \
+  if (accum->type == UCL_REG_TYPE_VOID) \
   { \
     switch (next->type) \
     { \
-    case reg_type_integer: \
-      _jit_clean (accum); \
+    case UCL_REG_TYPE_INTEGER: \
       fresh (accum, next->type); \
       mpz_init (accum->integer); \
       mpz_set (accum->integer, next->integer); \
       break; \
-    case reg_type_rational: \
-      _jit_clean (accum); \
+    case UCL_REG_TYPE_RATIONAL: \
       fresh (accum, next->type); \
       mpq_init (accum->rational); \
       mpq_set (accum->rational, next->rational); \
       break; \
-    case reg_type_real: \
-      _jit_clean (accum); \
+    case UCL_REG_TYPE_REAL: \
       fresh (accum, next->type); \
       mpfr_init (accum->real); \
       mpfr_set (accum->real, next->real, round); \
@@ -84,8 +58,8 @@ _jit_##suffix (Reg* accum, const Reg* next) \
   } \
   else \
   { \
-    if (next->type < reg_type_integer \
-      || next->type > reg_type_real) \
+    if (next->type < UCL_REG_TYPE_INTEGER \
+      || next->type > UCL_REG_TYPE_REAL) \
     { \
       g_error ("Should be a numeric value"); \
       g_assert_not_reached (); \
@@ -93,27 +67,15 @@ _jit_##suffix (Reg* accum, const Reg* next) \
  ; \
     if (accum->type >= next->type) \
     { \
-      inner; \
-    } \
-    else \
-    { \
-      _jit_cast (accum, next->type); \
-      _jit_##suffix (accum, next); \
-    } \
-  } \
-}
-
-#define simple_wrap(suffix) \
-  simple_wraps (suffix, \
-    switch (accum->type) \
+      switch (accum->type) \
       { \
-      case reg_type_integer: \
+      case UCL_REG_TYPE_INTEGER: \
         switch (next->type) \
         { \
-        case reg_type_integer: \
+        case UCL_REG_TYPE_INTEGER: \
           mpz_##suffix (accum->integer, accum->integer, next->integer); \
           break; \
-        case reg_type_rational: \
+        case UCL_REG_TYPE_RATIONAL: \
           { \
             mpz_t z; \
             mpz_init (z); \
@@ -122,7 +84,7 @@ _jit_##suffix (Reg* accum, const Reg* next) \
             mpz_clear (z); \
           } \
           break; \
-        case reg_type_real: \
+        case UCL_REG_TYPE_REAL: \
           { \
             mpz_t z; \
             mpz_init (z); \
@@ -133,13 +95,13 @@ _jit_##suffix (Reg* accum, const Reg* next) \
           break; \
         } \
         break; \
-      case reg_type_rational: \
+      case UCL_REG_TYPE_RATIONAL: \
         switch (next->type) \
         { \
-        case reg_type_rational: \
+        case UCL_REG_TYPE_RATIONAL: \
           mpq_##suffix (accum->rational, accum->rational, next->rational); \
           break; \
-        case reg_type_integer: \
+        case UCL_REG_TYPE_INTEGER: \
           { \
             mpq_t q; \
             mpq_init (q); \
@@ -148,7 +110,7 @@ _jit_##suffix (Reg* accum, const Reg* next) \
             mpq_clear (q); \
           } \
           break; \
-        case reg_type_real: \
+        case UCL_REG_TYPE_REAL: \
           { \
             mpq_t q; \
             mpq_init (q); \
@@ -159,67 +121,52 @@ _jit_##suffix (Reg* accum, const Reg* next) \
           break; \
         } \
         break; \
-      case reg_type_real: \
+      case UCL_REG_TYPE_REAL: \
         switch (next->type) \
         { \
-        case reg_type_integer: \
+        case UCL_REG_TYPE_INTEGER: \
           mpfr_##suffix##_z (accum->real, accum->real, next->integer, round); \
           break; \
-        case reg_type_rational: \
+        case UCL_REG_TYPE_RATIONAL: \
           mpfr_##suffix##_q (accum->real, accum->real, next->rational, round); \
           break; \
-        case reg_type_real: \
+        case UCL_REG_TYPE_REAL: \
           mpfr_##suffix (accum->real, accum->real, next->real, round); \
           break; \
         } \
         break; \
-      })
-
-#define simple_compiler(suffix) \
-gpointer \
-abaco_jits_arithmetics_##suffix (AbacoJitState* state, const gchar* expr) \
-{ \
-  gpointer lpc = NULL; \
-  if (G_TYPE_CHECK_INSTANCE_TYPE (state, ABACO_JITS_TYPE_X86_64_STATE)) \
-    lpc = abaco_jits_x86_64_accum_wrap (state, expr, _jit_##suffix ); \
-  else \
-  { \
-    /* TODO: add generic interface */ \
-    g_error ("Unknown state architecture"); \
-    g_assert_not_reached (); \
+      } \
+    } \
+    else \
+    { \
+      ucl_reg_cast (accum, accum, next->type); \
+      ucl_arithmetic_##suffix (accum, next); \
+    } \
   } \
-return lpc; \
 }
 
-#define simple(suffix) \
-  simple_wrap (suffix) \
-  simple_compiler (suffix)
+simple (add);
+simple (sub);
+simple (mul);
 
-simple (add)
-simple (sub)
-simple (mul)
-
-static void
-_jit_div (Reg* accum, const Reg* next)
+void
+ucl_arithmetic_div (UclReg* accum, const UclReg* next)
 {
-  if (accum->type == reg_type_void)
+  if (accum->type == UCL_REG_TYPE_VOID)
   {
     switch (next->type)
     {
-    case reg_type_integer:
-      _jit_clean (accum);
+    case UCL_REG_TYPE_INTEGER:
       fresh (accum, next->type);
       mpz_init (accum->integer);
       mpz_set (accum->integer, next->integer);
       break;
-    case reg_type_rational:
-      _jit_clean (accum);
+    case UCL_REG_TYPE_RATIONAL:
       fresh (accum, next->type);
       mpq_init (accum->rational);
       mpq_set (accum->rational, next->rational);
       break;
-    case reg_type_real:
-      _jit_clean (accum);
+    case UCL_REG_TYPE_REAL:
       fresh (accum, next->type);
       mpfr_init (accum->real);
       mpfr_set (accum->real, next->real, round);
@@ -232,8 +179,8 @@ _jit_div (Reg* accum, const Reg* next)
   }
   else
   {
-    if (next->type < reg_type_integer
-      || next->type > reg_type_real)
+    if (next->type < UCL_REG_TYPE_INTEGER
+      || next->type > UCL_REG_TYPE_REAL)
     {
       g_error ("Should be a numeric value");
       g_assert_not_reached ();
@@ -243,34 +190,34 @@ _jit_div (Reg* accum, const Reg* next)
     {
       switch (accum->type)
       {
-      case reg_type_integer:
-        _jit_cast (accum, reg_type_rational);
+      case UCL_REG_TYPE_INTEGER:
+        ucl_reg_cast (accum, accum, UCL_REG_TYPE_RATIONAL);
         G_GNUC_FALLTHROUGH;
-      case reg_type_rational:
+      case UCL_REG_TYPE_RATIONAL:
         switch (next->type)
         {
-        case reg_type_integer:
+        case UCL_REG_TYPE_INTEGER:
           {
             mpz_ptr z = mpq_denref (accum->rational);
             mpz_mul (z, z, next->integer);
             mpq_canonicalize (accum->rational);
           }
           break;
-        case reg_type_rational:
+        case UCL_REG_TYPE_RATIONAL:
           mpq_div (accum->rational, accum->rational, next->rational);
           break;
         }
         break;
-      case reg_type_real:
+      case UCL_REG_TYPE_REAL:
         switch (next->type)
         {
-        case reg_type_integer:
+        case UCL_REG_TYPE_INTEGER:
           mpfr_div_z (accum->real, accum->real, next->integer, round);
           break;
-        case reg_type_rational:
+        case UCL_REG_TYPE_RATIONAL:
           mpfr_div_q (accum->real, accum->real, next->rational, round);
           break;
-        case reg_type_real:
+        case UCL_REG_TYPE_REAL:
           mpfr_div (accum->real, accum->real, next->real, round);
           break;
         }
@@ -279,10 +226,8 @@ _jit_div (Reg* accum, const Reg* next)
     }
     else
     {
-      _jit_cast (accum, next->type);
-      _jit_div (accum, next);
+      ucl_reg_cast (accum, accum, next->type);
+      ucl_arithmetic_div (accum, next);
     }
   }
 }
-
-simple_compiler (div)

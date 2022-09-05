@@ -166,6 +166,8 @@ AC_SUBST([ABACO_JITS_CFLAGS], [-I\${top_builddir}/src/jits/])
 AC_SUBST([ABACO_JITS_LIBS], [\${top_builddir}/src/jits/libabaco_jits.la])
 AC_SUBST([ABACO_MP_CFLAGS], [-I\${top_builddir}/src/mp/])
 AC_SUBST([ABACO_MP_LIBS], [\${top_builddir}/src/mp/libabaco_mp.la])
+AC_SUBST([ABACO_UCL_CFLAGS], [-I\${top_builddir}/src/ucl/])
+AC_SUBST([ABACO_UCL_LIBS], [\${top_builddir}/src/ucl/libabaco_ucl.la])
 
 #
 # Check for libraries using pkg-config
@@ -218,6 +220,7 @@ src/jit/Makefile
 src/jits/Makefile
 src/mp/Makefile
 src/mp/closure/Makefile
+src/ucl/Makefile
 test/Makefile
 Makefile
 ])

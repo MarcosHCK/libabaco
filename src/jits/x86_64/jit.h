@@ -19,15 +19,15 @@
 #define __X86_64_JIT__ 1
 #include <libabaco_jit.h>
 
-#if !defined(EXPORT)
+#if !defined(JITS_EXPORT)
 # if defined(_MSC_VER)
-#   define EXPORT __declspec(dllexport) extern
+#   define JITS_EXPORT __declspec(dllexport) extern
 # elif __GNUC__ >= 4
-#   define EXPORT __attribute__((visibility("default"))) extern
+#   define JITS_EXPORT __attribute__((visibility("default"))) extern
 # else // __GNUC__ < 4
-#   define EXPORT extern
+#   define JITS_EXPORT extern
 # endif // _MSC_VER
-#endif // EXPORT
+#endif // JITS_EXPORT
 
 #define ABACO_JITS_TYPE_X86_64 (abaco_jits_x86_64_get_type())
 
@@ -35,7 +35,7 @@
 extern "C" {
 #endif // __cplusplus
 
-EXPORT GType
+JITS_EXPORT GType
 abaco_jits_x86_64_get_type (void) G_GNUC_CONST;
 
 #if __cplusplus
