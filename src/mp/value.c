@@ -116,7 +116,7 @@ _mp_stack_notify (gpointer pvalue)
     g_value_unset (& value->value);
     G_GNUC_FALLTHROUGH;
   default:
-    ucl_reg_clear (pvalue);
+    ucl_reg_unset (pvalue);
     break;
   }
 }
