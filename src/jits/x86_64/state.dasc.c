@@ -50,6 +50,8 @@ extern const gchar** extern_names;
 #define regsz (sizeof (UclReg))
 typedef struct _Record Record;
 
+#define base (10)
+
 #define stacksz_r \
   ( \
     0 \
@@ -74,7 +76,7 @@ typedef struct _Record Record;
 |
 |.define arg1, rdi
 |.define arg2, rsi
-|.define arg3, r8
+|.define arg3, rdx
 #endif // __DASC__
 
 #define ABACO_JITS_TYPE_X86_64_STATE (abaco_jits_x86_64_state_get_type ())
@@ -117,7 +119,6 @@ _jit_extern (dasm_State** Dst, gpointer addr, guint index, int type)
   GHashTable* externs;
   const gchar* name;
   gpointer func;
-  gintptr base;
   gintptr rel;
   GType gtype;
   int off;
@@ -215,7 +216,7 @@ abaco_jits_x86_64_state_class_load_constant (AbacoJitState* pself, guint index, 
     g_hash_table_insert (self->intern, g_strdup (expr), lpc);
     dasm_growpc (Dst, self->lastpc);
 
-    if (!ucl_reg_load_string (&reg, expr))
+    if (!ucl_reg_load_string (&reg, expr, base))
     {
       g_warning ("Can't parse expression '%s'", expr);
       ucl_reg_unset (&reg);
@@ -233,7 +234,7 @@ abaco_jits_x86_64_state_class_load_constant (AbacoJitState* pself, guint index, 
     else
     {
       gchar* value =
-      ucl_reg_save_string (&reg);
+      ucl_reg_save_string (&reg, base);
       ucl_reg_unset (&reg);
 
 #if __DASC__
@@ -251,6 +252,7 @@ abaco_jits_x86_64_state_class_load_constant (AbacoJitState* pself, guint index, 
 #if __DASC__
   | slot arg1, (index)
   | lea arg2, [=>(pc)]
+  | mov arg3, (base)
   | call extern _jit_load
 #endif // __DASC__
 }
@@ -389,6 +391,12 @@ abaco_jits_x86_64_state_class_finish (AbacoJitState* pself)
     g_assert_not_reached ();
   }
 
+#pragma push(base)
+  int _base = base;
+#undef base
+  closure->base = _base;
+#pragma pop(base)
+
   closure->main = self->labels [globl_main];
   closure->stacksz = self->stacksz;
   abaco_jits_closure_prepare (closure);
@@ -435,14 +443,6 @@ abaco_jits_x86_64_state_class_init (AbacoJitsX8664StateClass* klass)
   g_hash_table_insert (klass->externs, "_jit_save", (gpointer) ucl_reg_save_string);
 #undef extern
 }
-
-#if __DASC__
-|.macro saveaddr, func
-||addr = GUINT64_TO_LE ((guintptr) func);
-|.dword (addr & G_MAXUINT32)
-|.dword (addr >> 32)
-|.endmacro
-#endif // __DASC__
 
 static void
 abaco_jits_x86_64_state_init (AbacoJitsX8664State* self)

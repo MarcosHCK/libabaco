@@ -361,7 +361,7 @@ _mp_stack_push_string (MpStack* stack, const gchar* value, int base)
   GArray* array = (gpointer) stack;
   MpValue mp = {0};
 
-  if (ucl_reg_load_string ((gpointer) &mp, value))
+  if (ucl_reg_load_string ((gpointer) &mp, value, base))
   {
     g_array_append_vals (array, &mp, 1);
     return TRUE;
@@ -435,7 +435,7 @@ _mp_stack_peek_string (MpStack* stack, int index, int base)
   MpValue* pmp = & stack->values [index];
   gchar* result = NULL;
 
-  result = ucl_reg_save_string ((gpointer) pmp);
+  result = ucl_reg_save_string ((gpointer) pmp, base);
   if (G_UNLIKELY (result == NULL))
     g_warning ("Can't cast to string");
 return result;

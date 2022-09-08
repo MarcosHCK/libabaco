@@ -23,10 +23,10 @@
 /* hidden API */
 
 UCL_EXPORT gboolean
-_ucl_loadq (mpq_t q, const gchar* expr, const gchar* dot);
+_ucl_loadq (mpq_t q, const gchar* expr, const gchar* dot, int base);
 
 gboolean
-_ucl_loadq (mpq_t q, const gchar* expr, const gchar* dot)
+_ucl_loadq (mpq_t q, const gchar* expr, const gchar* dot, int base)
 {
   mpz_ptr num = mpq_numref (q);
   mpz_ptr den = mpq_denref (q);
@@ -51,7 +51,7 @@ _ucl_loadq (mpq_t q, const gchar* expr, const gchar* dot)
   buf [partial] = '\0';
 
   result =
-  mpz_set_str (num, buf, 10);
+  mpz_set_str (num, buf, base);
   if (G_UNLIKELY (result < 0))
   {
     if (buf != & stat [0])
@@ -64,7 +64,7 @@ _ucl_loadq (mpq_t q, const gchar* expr, const gchar* dot)
   buf [0] = '1';
 
   result =
-  mpz_set_str (den, buf, 10);
+  mpz_set_str (den, buf, base);
   if (G_UNLIKELY (result < 0))
   {
     if (buf != & stat [0])
@@ -98,7 +98,7 @@ ucl_reg_load_double (UclReg* reg, double value)
 }
 
 gboolean
-ucl_reg_load_string (UclReg* reg, const gchar* expr)
+ucl_reg_load_string (UclReg* reg, const gchar* expr, int base)
 {
   const gchar* val = expr;
 
@@ -108,13 +108,13 @@ ucl_reg_load_string (UclReg* reg, const gchar* expr)
     {
     case 0:
       ucl_reg_setup (reg, UCL_REG_TYPE_INTEGER);
-      return ! (mpz_set_str (reg->integer, expr, 10) < 0);
+      return ! (mpz_set_str (reg->integer, expr, base) < 0);
     case '.':
       ucl_reg_setup (reg, UCL_REG_TYPE_RATIONAL);
-      return _ucl_loadq (reg->rational, expr, val);
+      return _ucl_loadq (reg->rational, expr, val, base);
     case '/':
       ucl_reg_setup (reg, UCL_REG_TYPE_RATIONAL);
-      if (G_UNLIKELY (mpq_set_str (reg->rational, expr, 10) < 0))
+      if (G_UNLIKELY (mpq_set_str (reg->rational, expr, base) < 0))
         return FALSE;
       mpq_canonicalize (reg->rational);
       return TRUE;
@@ -131,7 +131,7 @@ ucl_reg_load (UclReg* reg, const GValue* value)
   if (G_TYPE_CHECK_VALUE_TYPE (value, G_TYPE_STRING))
   {
     const gchar* val = g_value_get_string (value);
-    return ucl_reg_load_string (reg, val);
+    return ucl_reg_load_string (reg, val, 0);
   } else
   if (G_TYPE_CHECK_VALUE_TYPE (value, G_TYPE_DOUBLE))
   {

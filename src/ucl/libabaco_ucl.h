@@ -89,7 +89,7 @@ ucl_reg_load_ldouble (UclReg* reg, long double value);
 void
 ucl_reg_load_double (UclReg* reg, double value);
 gboolean
-ucl_reg_load_string (UclReg* reg, const gchar* expr);
+ucl_reg_load_string (UclReg* reg, const gchar* expr, int base);
 gboolean
 ucl_reg_load (UclReg* reg, const GValue* value);
 
@@ -98,14 +98,12 @@ ucl_reg_load (UclReg* reg, const GValue* value);
  *
  */
 
-gchar*
-ucl_reg_save_string (const UclReg* reg);
 long double
 ucl_reg_save_ldouble (const UclReg* reg);
 double
 ucl_reg_save_double (const UclReg* reg);
-void
-ucl_reg_save (GValue* value, const UclReg* reg);
+gchar*
+ucl_reg_save_string (const UclReg* reg, int base);
 
 /*
  * arithmetic.c

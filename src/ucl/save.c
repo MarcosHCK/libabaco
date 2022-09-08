@@ -18,8 +18,47 @@
 #include <config.h>
 #include <libabaco_ucl.h>
 
+#define round (mpfr_get_default_rounding_mode ())
+
+long double
+ucl_reg_save_ldouble (const UclReg* reg)
+{
+  long double result = 0;
+
+  switch (reg->type)
+  {
+  case UCL_REG_TYPE_INTEGER:
+  case UCL_REG_TYPE_RATIONAL:
+    {
+      UclReg cast;
+      ucl_reg_cast (&cast, reg, UCL_REG_TYPE_REAL);
+      result = mpfr_get_ld (cast.real, round);
+      ucl_reg_unset (&cast);
+    }
+    break;
+  case UCL_REG_TYPE_REAL:
+    result = mpfr_get_ld (reg->real, round);
+    break;
+  }
+return result;
+}
+
+double
+ucl_reg_save_double (const UclReg* reg)
+{
+  switch (reg->type)
+  {
+  case UCL_REG_TYPE_INTEGER:
+    return mpz_get_d (reg->integer);
+  case UCL_REG_TYPE_RATIONAL:
+    return mpq_get_d (reg->rational);
+  case UCL_REG_TYPE_REAL:
+    return mpfr_get_d (reg->real, round);
+  }
+}
+
 gchar*
-ucl_reg_save_string (const UclReg* reg)
+ucl_reg_save_string (const UclReg* reg, int base)
 {
   gchar* result = NULL;
   gsize length = 0;
@@ -28,25 +67,24 @@ ucl_reg_save_string (const UclReg* reg)
   {
   case UCL_REG_TYPE_INTEGER:
     length = 2;
-    length += mpz_sizeinbase (reg->integer, 10);
+    length += mpz_sizeinbase (reg->integer, base);
     result = g_malloc (length);
-    result = mpz_get_str (result, 10, reg->integer);
+    result = mpz_get_str (result, base, reg->integer);
     break;
   case UCL_REG_TYPE_RATIONAL:
     length = 3;
-    length += mpz_sizeinbase (mpq_numref (reg->rational), 10);
-    length += mpz_sizeinbase (mpq_denref (reg->rational), 10);
-    result = mpq_get_str (g_malloc (length), 10, reg->rational);
+    length += mpz_sizeinbase (mpq_numref (reg->rational), base);
+    length += mpz_sizeinbase (mpq_denref (reg->rational), base);
+    result = mpq_get_str (g_malloc (length), base, reg->rational);
     break;
   case UCL_REG_TYPE_REAL:
     {
       mpfr_exp_t exp;
-      mpfr_rnd_t mode;
       gsize partial;
       gchar* tmp;
 
-      mode = mpfr_get_default_rounding_mode ();
-      tmp = mpfr_get_str (NULL, &exp, 10, 0, reg->real, mode);
+      tmp =
+      mpfr_get_str (NULL, &exp, base, 0, reg->real, round);
       g_assert (tmp != NULL);
 
       length = strlen (tmp);
@@ -89,43 +127,4 @@ ucl_reg_save_string (const UclReg* reg)
     break;
   }
 return result;
-}
-
-#define round (mpfr_get_default_rounding_mode ())
-
-long double
-ucl_reg_save_ldouble (const UclReg* reg)
-{
-  long double result = 0;
-
-  switch (reg->type)
-  {
-  case UCL_REG_TYPE_INTEGER:
-  case UCL_REG_TYPE_RATIONAL:
-    {
-      UclReg cast;
-      ucl_reg_cast (&cast, reg, UCL_REG_TYPE_REAL);
-      result = mpfr_get_ld (cast.real, round);
-      ucl_reg_unset (&cast);
-    }
-    break;
-  case UCL_REG_TYPE_REAL:
-    result = mpfr_get_ld (reg->real, round);
-    break;
-  }
-return result;
-}
-
-double
-ucl_reg_save_double (const UclReg* reg)
-{
-  switch (reg->type)
-  {
-  case UCL_REG_TYPE_INTEGER:
-    return mpz_get_d (reg->integer);
-  case UCL_REG_TYPE_RATIONAL:
-    return mpq_get_d (reg->rational);
-  case UCL_REG_TYPE_REAL:
-    return mpfr_get_d (reg->real, round);
-  }
 }

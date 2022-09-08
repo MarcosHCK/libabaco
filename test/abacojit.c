@@ -37,7 +37,6 @@ typedef struct
   gpointer main;
   gpointer block;
   gsize blocksz;
-  gsize stacksz;
 } _Closure;
 
 static inline void

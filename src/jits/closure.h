@@ -33,6 +33,7 @@ struct _Closure
   gpointer block;
   gsize blocksz;
   gsize stacksz;
+  int base;
 };
 
 typedef void (*BlockFunc) (gpointer stack, guint stacksz, guint n_params);

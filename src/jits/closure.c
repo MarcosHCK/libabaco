@@ -82,7 +82,7 @@ _closure_marshal (GClosure* closure,
 # ifdef G_OS_UNIX
 #  define arg1 "rdi"
 #  define arg2 "rsi"
-#  define arg3 "rcx"
+#  define arg3 "rdx"
 # else // !G_OS_UNIX
 #  define arg1 "rcx"
 #  define arg2 "rdx"
@@ -113,7 +113,7 @@ _closure_marshal (GClosure* closure,
 # error "Unimplemented architecture"
 #endif // __x86_64__
 
-  g_value_take_string (result, ucl_reg_save_string (stack));
+  g_value_take_string (result, ucl_reg_save_string (stack, cc->base));
   ucl_reg_unsets (stack, cc->stacksz);
   if (stack != & stat[0])
     g_free (stack);
