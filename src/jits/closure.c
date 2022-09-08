@@ -17,7 +17,6 @@
  */
 #include <config.h>
 #include "closure.h"
-#include <reg.h>
 
 #ifdef G_OS_WINDOWS
 # include <windows.h>
@@ -27,6 +26,9 @@
 #   define MAP_ANONYMOUS MAP_ANON
 # endif // !MAP_ANONYMOUS && MAP_ANON
 #endif // G_OS_WINDOWS
+
+#define regsz (sizeof (UclReg))
+#include <libabaco_ucl.h>
 
 /* public API */
 
@@ -53,10 +55,9 @@ _closure_marshal (GClosure* closure,
   g_return_if_fail (result != NULL);
   g_return_if_fail (cc->stacksz >= n_params);
 
-  const gchar* param = NULL;
   gpointer callback = NULL;
-  Reg stat [1024 / regsz];
-  Reg* stack = NULL;
+  UclReg stat [1024 / regsz];
+  UclReg* stack = NULL;
   guint i;
 
   callback = (marshal_data ? marshal_data : cc->main);
@@ -75,11 +76,7 @@ _closure_marshal (GClosure* closure,
   }
 
   for (i = 0; i < n_params; i++)
-  {
-    param =
-    g_value_get_string (& params[i]);
-    _jit_load (& stack[i], param);
-  }
+    ucl_reg_load (& stack [i], & params [i]);
 
 #if __x86_64__
 # ifdef G_OS_UNIX
@@ -116,7 +113,7 @@ _closure_marshal (GClosure* closure,
 # error "Unimplemented architecture"
 #endif // __x86_64__
 
-  g_value_take_string (result, _jit_save (stack));
+  g_value_take_string (result, ucl_reg_save_string (stack));
   ucl_reg_unsets (stack, cc->stacksz);
   if (stack != & stat[0])
     g_free (stack);

@@ -17,7 +17,7 @@
  */
 #ifndef __LIBABACO_UCL__
 #define __LIBABACO_UCL__ 1
-#include <glib.h>
+#include <glib-object.h>
 #include <mpfr.h>
 
 #if !defined(UCL_EXPORT)
@@ -84,12 +84,28 @@ ucl_reg_copy (UclReg* reg, const UclReg* from);
  *
  */
 
-gboolean
-ucl_reg_load_string (UclReg* reg, const gchar* expr);
 void
 ucl_reg_load_ldouble (UclReg* reg, long double value);
 void
 ucl_reg_load_double (UclReg* reg, double value);
+gboolean
+ucl_reg_load_string (UclReg* reg, const gchar* expr);
+gboolean
+ucl_reg_load (UclReg* reg, const GValue* value);
+
+/*
+ * save.c
+ *
+ */
+
+gchar*
+ucl_reg_save_string (const UclReg* reg);
+long double
+ucl_reg_save_ldouble (const UclReg* reg);
+double
+ucl_reg_save_double (const UclReg* reg);
+void
+ucl_reg_save (GValue* value, const UclReg* reg);
 
 /*
  * arithmetic.c

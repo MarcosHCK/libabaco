@@ -43,7 +43,9 @@ pkginclude_HEADERS=\
 
 libabaco_ucl_la_SOURCES=\
 	arithmetic.c \
+	load.c \
 	power.c \
+	save.c \
 	unified.c \
 	$(VOID)
 libabaco_ucl_la_CFLAGS=\

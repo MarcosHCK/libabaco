@@ -359,110 +359,14 @@ _mp_stack_push_string (MpStack* stack, const gchar* value, int base)
   g_return_val_if_fail (stack != NULL, FALSE);
   g_return_val_if_fail (base > 0, FALSE);
   GArray* array = (gpointer) stack;
-  MpValue mp;
+  MpValue mp = {0};
 
-  gsize length = strlen (value);
-  const gchar* end = NULL;
-  g_return_val_if_fail (g_utf8_validate (value, length, &end), FALSE);
-  g_return_val_if_fail (end - value == length, FALSE);
-  g_return_val_if_fail (length > 0, FALSE);
-
-  const gchar* val = value;
-  const long bufsz = 512;
-  gchar stat [bufsz + sizeof (void*)];
-  gunichar c = 0;
-
-  do
+  if (ucl_reg_load_string ((gpointer) &mp, value))
   {
-    c = g_utf8_get_char (val);
-    if (c == 0)
-      break;
-
-    switch (c)
-    {
-    case '.':
-      mp.type = MP_TYPE_RATIONAL;
-      {
-        mpq_init (mp.rational);
-        mpz_ptr num = mpq_numref (mp.rational);
-        mpz_ptr den = mpq_denref (mp.rational);
-        guint t, partial = 0;
-        gchar* next = NULL;
-        gchar* buf = NULL;
-        int result;
-
-        /* numerator */
-
-        partial = length - g_utf8_skip [*(guchar*) val];
-        next = g_utf8_next_char (val);
-        if (partial > bufsz)
-          buf = g_malloc (partial + 1);
-        else
-          buf = & stat [0];
-
-        t = val - value;
-        memcpy (& buf [0], value, t);
-        memcpy (& buf [t], next, partial - t);
-        buf [partial] = '\0';
-
-        result = mpz_set_str (num, buf, base);
-        if (G_UNLIKELY (result < 0))
-        {
-          if (buf != & stat [0])
-            g_free (buf);
-          return FALSE;
-        }
-
-        /* denominator */
-
-        partial = g_utf8_strlen (val, -1);
-        if (buf != & stat [0])
-          buf = g_realloc (buf, partial + 1);
-        else
-        {
-          if (partial > bufsz)
-            buf = g_malloc (partial + 1);
-        }
-
-        memset (& buf [1], '0', partial - 1);
-        buf [partial] = '\0';
-        buf [0] = '1';
-
-        result = mpz_set_str (den, buf, base);
-        if (G_UNLIKELY (result < 0))
-        {
-          if (buf != & stat [0])
-            g_free (buf);
-          return FALSE;
-        }
-
-        /* canonicalize */
-
-        if (buf != & stat [0])
-          g_free (buf);
-        mpq_canonicalize (mp.rational);
-        g_array_append_val (array, mp);
-        return TRUE;
-      }
-      break;
-    case '/':
-      mp.type = MP_TYPE_RATIONAL;
-      {
-        mpq_init (mp.rational);
-        mpq_set_str (mp.rational, value, base);
-        mpq_canonicalize (mp.rational);
-        g_array_append_val (array, mp);
-        return TRUE;
-      }
-      break;
-    }
-  } while ((val = g_utf8_next_char (val)) != NULL);
-
-  mp.type = MP_TYPE_INTEGER;
-  mpz_init (mp.integer);
-  mpz_set_str (mp.integer, value, base);
-  g_array_append_val (array, mp);
-return TRUE;
+    g_array_append_vals (array, &mp, 1);
+    return TRUE;
+  }
+return FALSE;
 }
 
 void
@@ -529,87 +433,11 @@ _mp_stack_peek_string (MpStack* stack, int index, int base)
   g_return_val_if_fail (index >= 0 && stack->length > index, NULL);
   g_return_val_if_fail (base != 0, NULL);
   MpValue* pmp = & stack->values [index];
-  GArray* array = (gpointer) stack;
   gchar* result = NULL;
-  gsize length = 0;
 
-  switch (pmp->type)
-  {
-  case MP_TYPE_INTEGER:
-    length = 2;
-    length += mpz_sizeinbase (pmp->integer, base);
-    result = mpz_get_str (g_malloc (length), base, pmp->integer);
-    break;
-  case MP_TYPE_RATIONAL:
-    length = 3;
-    length += mpz_sizeinbase (mpq_numref (pmp->rational), base);
-    length += mpz_sizeinbase (mpq_denref (pmp->rational), base);
-    result = mpq_get_str (g_malloc (length), base, pmp->rational);
-    break;
-  case MP_TYPE_REAL:
-    {
-      mpfr_exp_t exp;
-      mpfr_rnd_t mode;
-      gsize partial = 0;
-      gchar* tmp = NULL;
-
-      mode = mpfr_get_default_rounding_mode ();
-      tmp = mpfr_get_str (NULL, &exp, base, 0, pmp->real, mode);
-
-      if (G_UNLIKELY (tmp == NULL))
-      {
-        g_warning ("invalid base");
-        return NULL;
-      }
-
-      length = strlen (tmp);
-
-      if (exp >= 0)
-      {
-        partial = ((length > exp) ? length : exp + 1) + 1;
-        if (exp != 0)
-          result = g_malloc (partial + 1);
-        else
-        {
-          result = g_malloc (partial + 2);
-          result [0] = '0';
-          ++result;
-        }
-
-        memset (result, '0', partial);
-        memcpy (& result [      0], & tmp [  0], (length > exp) ?          exp : length);
-        memcpy (& result [exp + 1], & tmp [exp], (length > exp) ? length - exp :      0);
-        result [partial] = '\0';
-        result [exp] = '.';
-
-        if (exp == 0)
-          --result;
-      } else
-      if (exp < 0)
-      {
-        exp = -exp;
-        partial = length + exp + 2;
-        result = g_malloc (partial + 1);
-
-        memset (result, '0', partial);
-        memcpy (& result [exp + 2], tmp, length);
-        result [partial] = '\0';
-        result [1] = '.';
-      }
-      else
-      {
-        mpfr_free_str (tmp);
-        g_error ("WTF?");
-        g_assert_not_reached ();
-      }
-
-      mpfr_free_str (tmp);
-    }
-    break;
-  default:
+  result = ucl_reg_save_string ((gpointer) pmp);
+  if (G_UNLIKELY (result == NULL))
     g_warning ("Can't cast to string");
-    break;
-  }
 return result;
 }
 

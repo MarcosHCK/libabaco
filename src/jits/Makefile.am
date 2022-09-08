@@ -44,14 +44,12 @@ pkginclude_HEADERS=\
 
 EXTRA_DIST+=\
 	closure.h \
-	reg.h \
 	x86_64/state.h \
 	$(VOID)
 
 libabaco_jits_la_SOURCES=\
 	calcs.c \
 	closure.c \
-	reg.c \
 	x86_64/jit.c \
   x86_64/state.c \
 	$(VOID)

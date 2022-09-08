@@ -18,7 +18,7 @@
 #ifndef __X86_64_JIT_STATE__
 #define __X86_64_JIT_STATE__ 1
 #include <libabaco_jit.h>
-#include <reg.h>
+#include <libabaco_ucl.h>
 
 #define ABACO_JITS_TYPE_X86_64_STATE (abaco_jits_x86_64_state_get_type ())
 
@@ -26,7 +26,7 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef void (*AccumWrap) (Reg* accum, const Reg* next);
+typedef void (*AccumWrap) (UclReg* accum, const UclReg* next);
 
 /*
  * internal API

@@ -29,7 +29,6 @@ _jit_extern (dasm_State** ctx, gpointer addr, guint index, int type);
 #include <./closure.h>
 #include <x86_64/jit.h>
 #include <x86_64/state.h>
-#include <reg.h>
 
 #if __DASC__
 |.arch x64
@@ -48,6 +47,7 @@ extern const gchar** extern_names;
 # define MAP_ANONYMOUS 0
 #endif // __DASC__
 
+#define regsz (sizeof (UclReg))
 typedef struct _Record Record;
 
 #define stacksz_r \
@@ -57,7 +57,7 @@ typedef struct _Record Record;
   )
 
 #if __DASC__
-|.type Reg, Reg
+|.type Reg, UclReg
 |.type Addr, gpointer
 |.define upslot, [rsp+(sizeof(gpointer)*0)]
 #endif // __DASC__
@@ -193,112 +193,64 @@ dumpbuffer (AbacoJitsX8664State* self, gconstpointer buf, gsize length)
     }
 }
 
-static inline guint
-_intern_constant_insert (AbacoJitsX8664State* self, const gchar* key, const gchar* value)
-{
-  gpointer ploc = NULL;
-  gsize length = 0;
-  guint loc = 0;
-
-  loc = self->lastpc++;
-  ploc = GUINT_TO_POINTER (loc);
-  length = strlen (value);
-
-  g_hash_table_insert (self->intern, g_strdup (key), ploc);
-  dasm_growpc (Dst, self->lastpc);
-#if __DASC__
-  |.data
-  |=>(loc):
-#endif // __DASC__
-  dumpbuffer (self, value, length + 1);
-#if __DASC__
-  |.code
-#endif // __DASC__
-return loc;
-}
-
-static inline guint
-_intern_constant (AbacoJitsX8664State* self, const gchar* expr)
-{
-  const long bufsz = 512 - 2;
-  gchar stat [bufsz + 2];
-  gchar* val = (gchar*) expr;
-  gchar* buf = NULL;
-  gsize partial;
-  guint loc;
-  mpq_t q;
-
-  do
-  {
-    switch (*val)
-    {
-    case 0:
-      loc = _intern_constant_insert (self, expr, expr);
-      return loc;
-    case '.':
-      mpq_init (q);
-      _jit_load_dot (q, expr, val);
-
-      partial = 3;
-      partial += mpz_sizeinbase (mpq_numref (q), 10);
-      partial += mpz_sizeinbase (mpq_denref (q), 10);
-
-      if (partial > bufsz)
-        buf = g_malloc (partial);
-      else
-        buf = & stat [0];
-
-      buf = mpq_get_str (buf, 10, q);
-      loc = _intern_constant_insert (self, expr, buf);
-
-      if (buf != & stat [0])
-        g_free (buf);
-      mpq_clear (q);
-      return loc;
-    case '/':
-      mpq_init (q);
-      mpq_set_str (q, expr, 10);
-      mpq_canonicalize (q);
-
-      partial = 3;
-      partial += mpz_sizeinbase (mpq_numref (q), 10);
-      partial += mpz_sizeinbase (mpq_denref (q), 10);
-
-      if (partial > bufsz)
-        buf = g_malloc (partial);
-      else
-        buf = & stat [0];
-
-      buf = mpq_get_str (buf, 10, q);
-      loc = _intern_constant_insert (self, expr, buf);
-
-      if (buf != & stat [0])
-        g_free (buf);
-      mpq_clear (q);
-      return loc;
-    }
-
-    val = g_utf8_next_char (val);
-  } while (val != NULL);
-}
-
 static void
 abaco_jits_x86_64_state_class_load_constant (AbacoJitState* pself, guint index, const gchar* expr)
 {
   AbacoJitsX8664State* self = (gpointer) pself;
   g_assert (self->stacksz > index);
-  gpointer ploc = 0;
-  guint loc = 0;
+  gpointer lpc = 0;
+  guint pc = 0;
   gchar best;
 
-  if (!g_hash_table_lookup_extended (self->intern, expr, NULL, &ploc))
-    loc = _intern_constant (self, expr);
+  if (g_hash_table_lookup_extended (self->intern, expr, NULL, &lpc))
+    pc = GPOINTER_TO_UINT (lpc);
   else
-    loc = GPOINTER_TO_UINT (ploc);
+  {
+    UclReg reg = {0};
+    gchar* value = NULL;
+
+    pc = self->lastpc++;
+    lpc = GUINT_TO_POINTER(pc);
+
+    g_hash_table_insert (self->intern, g_strdup (expr), lpc);
+    dasm_growpc (Dst, self->lastpc);
+
+    if (!ucl_reg_load_string (&reg, expr))
+    {
+      g_warning ("Can't parse expression '%s'", expr);
+      ucl_reg_unset (&reg);
+
+#if __DASC__
+      |.data
+      |=>(pc):
+#endif // __DASC__
+      dumpbuffer (self, expr, strlen (expr) + 1);
+      g_free (value);
+#if __DASC__
+      |.code
+#endif // __DASC__
+    }
+    else
+    {
+      gchar* value =
+      ucl_reg_save_string (&reg);
+      ucl_reg_unset (&reg);
+
+#if __DASC__
+      |.data
+      |=>(pc):
+#endif // __DASC__
+      dumpbuffer (self, value, strlen (value) + 1);
+      g_free (value);
+#if __DASC__
+      |.code
+#endif // __DASC__
+    }
+  }
 
 #if __DASC__
   | slot arg1, (index)
-  | lea arg2, [=>(loc)]
+  | lea arg2, [=>(pc)]
   | call extern _jit_load
 #endif // __DASC__
 }
@@ -477,12 +429,20 @@ abaco_jits_x86_64_state_class_init (AbacoJitsX8664StateClass* klass)
 #define extern(var) G_STRINGIFY (var),var
   g_hash_table_insert (klass->externs, extern (_jit_error_call));
   g_hash_table_insert (klass->externs, extern (_jit_error_nargs));
-  g_hash_table_insert (klass->externs, extern (_jit_clean));
-  g_hash_table_insert (klass->externs, extern (_jit_move));
-  g_hash_table_insert (klass->externs, extern (_jit_load));
-  g_hash_table_insert (klass->externs, extern (_jit_save));
+  g_hash_table_insert (klass->externs, "_jit_clean", (gpointer) ucl_reg_unset);
+  g_hash_table_insert (klass->externs, "_jit_move", (gpointer) ucl_reg_copy);
+  g_hash_table_insert (klass->externs, "_jit_load", (gpointer) ucl_reg_load_string);
+  g_hash_table_insert (klass->externs, "_jit_save", (gpointer) ucl_reg_save_string);
 #undef extern
 }
+
+#if __DASC__
+|.macro saveaddr, func
+||addr = GUINT64_TO_LE ((guintptr) func);
+|.dword (addr & G_MAXUINT32)
+|.dword (addr >> 32)
+|.endmacro
+#endif // __DASC__
 
 static void
 abaco_jits_x86_64_state_init (AbacoJitsX8664State* self)
