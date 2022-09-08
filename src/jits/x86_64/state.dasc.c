@@ -534,11 +534,24 @@ abaco_jits_x86_64_accum_wrap (gpointer pself, const gchar* name, gboolean invert
     | slot_d r14, r14
     | call extern _jit_clean
     |2:
-    | mov arg1, r12
-    | mov arg2, r13
-    | call rbx
-    | add r13, (regsz)
-    | cmp r13, r14
+
+    if (invert)
+    {
+      | mov arg1, r12
+      | sub r14, (regsz)
+      | mov arg2, r14
+      | call rbx
+      | cmp r13, r14
+    }
+    else
+    {
+      | mov arg1, r12
+      | mov arg2, r13
+      | call rbx
+      | add r13, (regsz)
+      | cmp r13, r14
+    }
+
     | jne <2
     | mov r12, Addr:rsp [0]
     | mov r13, Addr:rsp [1]
