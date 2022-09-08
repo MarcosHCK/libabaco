@@ -84,7 +84,7 @@ _jit_load_dot (mpq_t q, const gchar* expr, const gchar* val)
 void
 _jit_clean (Reg* reg)
 {
-  ucl_reg_clear (reg);
+  ucl_reg_unset (reg);
 }
 
 void

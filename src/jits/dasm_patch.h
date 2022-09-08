@@ -41,13 +41,4 @@
 #define DASM_M_FREE(ctx, p, sz) \
   g_free (p)
 
-#ifdef G_OS_WINDOWS
-# include <windows.h>
-#else // !G_OS_WINDOWS
-# include <sys/mman.h>
-# if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
-#   define MAP_ANONYMOUS MAP_ANON
-# endif // !MAP_ANONYMOUS && MAP_ANON
-#endif // G_OS_WINDOWS
-
 #endif // __DASM_PATCH__

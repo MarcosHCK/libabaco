@@ -26,6 +26,7 @@ _jit_extern (dasm_State** ctx, gpointer addr, guint index, int type);
 (_jit_extern ((ctx), (addr), (idx), (type)))
 
 #include <dasm_x86.h>
+#include <./closure.h>
 #include <x86_64/jit.h>
 #include <x86_64/state.h>
 #include <reg.h>
@@ -404,140 +405,42 @@ abaco_jits_x86_64_state_class_ret (AbacoJitState* pself, guint index)
 #endif // __DASC__
 }
 
-static void
-_closure_data_free (gpointer pdata, GClosure* pself)
-{
-  Closure* self = (Closure*) pself;
-#ifdef G_OS_WINDOWS
-  VirtualFree (self->block, self->blocksz, 0);
-#else // !G_OS_WINDOWS
-  munmap (self->block, self->blocksz);
-#endif // G_OS_WINDOWS
-}
-
-static void
-_closure_marshal (GClosure* closure,
-                  GValue* result,
-                  guint n_params,
-                  const GValue* params,
-                  gpointer invocation_hint G_GNUC_UNUSED,
-                  gpointer marshal_data)
-{
-  Closure* cc = (Closure*) closure;
-  g_return_if_fail (result != NULL);
-  g_return_if_fail (cc->stacksz >= n_params);
-
-  gpointer callback = NULL;
-  const gchar* param = NULL;
-  Reg stat [1024 / regsz];
-  Reg* stack = NULL;
-  guint i;
-
-  callback = (marshal_data ? marshal_data : cc->main);
-  if (cc->stacksz > G_N_ELEMENTS (stat))
-    stack = g_malloc0 (cc->stacksz * regsz);
-  else
-  {
-    stack = & stat[0];
-#if HAVE_MEMSET
-    memset (stack, 0, cc->stacksz * regsz);
-#else // !HAVE_MEMSET
-    static Reg __empty = {0};
-    for (i = 0; i < cc->stacksz; i++)
-      stack [i] = __empty;
-#endif // HAVE_MEMSET
-  }
-
-  for (i = 0; i < n_params; i++)
-  {
-    param =
-    g_value_get_string (& params[i]);
-    _jit_load (& stack[i], param);
-  }
-
-#ifdef G_OS_UNIX
-# define ARG1 "rdi"
-# define ARG2 "rsi"
-# define ARG3 "rcx"
-#else // !G_OS_UNIX
-# define ARG1 "rcx"
-# define ARG2 "rdx"
-# define ARG3 "r8"
-#endif // G_OS_UNIX
-
-  asm
-  ("push %%rbp;"
-   "movq %1, %%rbp;"
-   "movq $0, %%" ARG1 ";"
-   "movq $0, %%" ARG2 ";"
-   "movq %2, %%" ARG3 ";"
-   "call *%%rax;"
-   "pop %%rbp;"
-   :
-   : "a" (callback),
-     "g" (stack),
-     "g" ((guintptr) n_params)
-   : "%" ARG1,
-     "%" ARG2,
-     "%" ARG3);
-
-#undef ARG1
-#undef ARG2
-#undef ARG3
-
-  g_value_take_string (result, _jit_save (stack));
-  ucl_reg_clears (stack, cc->stacksz);
-  if (stack != & stat[0])
-    g_free (stack);
-}
-
 static GClosure*
 abaco_jits_x86_64_state_class_finish (AbacoJitState* pself)
 {
   AbacoJitsX8664State* self = (gpointer) pself;
-  GClosure* closure = NULL;
-  Closure* cclosure = NULL;
-  gpointer block = NULL;
+  Closure* closure = NULL;
   size_t blocksz = 0;
+  int result;
 
 #if __DASC__
   | add rsp, (stacksz_r)
   | ret
 #endif // __DASC__
 
-  dasm_link (Dst, &blocksz);
-#ifdef G_OS_WINDOWS
-  block = VirtualAlloc (0, blocksz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-#else // !G_OS_WINDOWS
-  block = mmap (0, blocksz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-#endif // G_OS_WINDOWS
-
-  dasm_encode (Dst, block);
-#ifdef G_OS_WINDOWS
-  G_STMT_START {
-    DWORD dwOld;
-    VirtualProtect (block, blocksz, PAGE_EXECUTE_READ, &dwOld);
-  } G_STMT_END;
-#else // !G_OS_WINDOWS
-  mprotect (block, blocksz, PROT_READ | PROT_EXEC);
-#endif // G_OS_WINDOWS
-
-  closure = g_closure_new_simple (sizeof (Closure), NULL);
-  cclosure = ((Closure*) closure);
-  cclosure->main = self->labels [globl_main];
-  cclosure->stacksz = self->stacksz;
-  cclosure->block = block;
-  cclosure->blocksz = blocksz;
-
-  if (closure->floating)
+  result = dasm_link (Dst, &blocksz);
+  if (G_LIKELY (result == DASM_S_OK))
+    closure = abaco_jits_closure_new (blocksz);
+  else
   {
-    g_closure_ref (closure);
-    g_closure_sink (closure);
+    dasm_free (Dst);
+    g_error ("Error linking JIT block");
+    g_assert_not_reached ();
+  }
+  
+  result = dasm_encode (Dst, closure->block);
+  if (G_UNLIKELY (result != DASM_S_OK))
+  {
+    dasm_free (Dst);
+    g_closure_unref ((gpointer) closure);
+    g_error ("Error encoding JIT block");
+    g_assert_not_reached ();
   }
 
-  g_closure_add_finalize_notifier (closure, NULL, _closure_data_free);
-  g_closure_set_marshal (closure, _closure_marshal);
-return closure;
+  closure->main = self->labels [globl_main];
+  closure->stacksz = self->stacksz;
+  abaco_jits_closure_prepare (closure);
+return (GClosure*) closure;
 }
 
 static void

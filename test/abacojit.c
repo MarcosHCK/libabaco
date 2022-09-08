@@ -115,10 +115,6 @@ do_report (GClosure* closure, const gchar* code)
           got = g_value_get_string (&result);
           if (g_strcmp0 (got, last))
             g_error ("Results differs");
-
-          _g_free0 (last);
-          last = g_strdup (got);
-
           partial += (gdouble) (dst - src);
         }
 

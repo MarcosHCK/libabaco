@@ -101,9 +101,8 @@ do_report (AbacoVM* vm, AbacoMP* mp, const gchar* code)
           result = abaco_mp_tostring (mp, -1, 10);
           if (g_strcmp0 (result, last))
             g_error ("Results differs");
-
-          _g_free0 (last);
-          last = result;
+          else
+            _g_free0 (result);
 
           partial += (gdouble) (dst - src);
           partial /= 2;
@@ -112,14 +111,14 @@ do_report (AbacoVM* vm, AbacoMP* mp, const gchar* code)
 
       abaco_vm_settop (vm, 1);
       g_string_append_printf (buffer, "> '%s'", code);
-      g_string_append_printf (buffer, " = '%s'", result);
+      g_string_append_printf (buffer, " = '%s'", last);
       g_string_append_printf (buffer, " (took ");
       g_string_append_printf (buffer, "%lf ticks, ", partial);
       g_string_append_printf (buffer, "%lf micros, ", partial / mpt);
       g_string_append_printf (buffer, "%lf seconds)", partial / spt);
       g_print ("%.*s\r\n", buffer->len, buffer->str);
       g_string_truncate (buffer, 0);
-      _g_free0 (result);
+      _g_free0 (last);
     }
 
     g_string_free (buffer, TRUE);

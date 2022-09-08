@@ -80,6 +80,18 @@ UCL_EXPORT void
 ucl_reg_copy (UclReg* reg, const UclReg* from);
 
 /*
+ * load.c
+ *
+ */
+
+gboolean
+ucl_reg_load_string (UclReg* reg, const gchar* expr);
+void
+ucl_reg_load_ldouble (UclReg* reg, long double value);
+void
+ucl_reg_load_double (UclReg* reg, double value);
+
+/*
  * arithmetic.c
  *
  */
