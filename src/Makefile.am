@@ -15,9 +15,29 @@
 # along with libabaco. If not, see <http://www.gnu.org/licenses/>.
 #
 
+VOID=
+
+#
+# Sub-directories
+#
+
 SUBDIRS=\
 	abaco \
 	ucl \
 	mp \
 	jit \
 	jits
+
+#
+# pkg-config
+#
+
+pkgconfigdir=${libdir}/pkgconfig
+
+pkgconfig_DATA=\
+	abaco/libabaco.pc \
+	jit/libabaco_jit.pc \
+	jits/libabaco_jits.pc \
+	mp/libabaco_mp.pc \
+	ucl/libabaco_ucl.pc \
+	$(VOID)

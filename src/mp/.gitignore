@@ -27,6 +27,7 @@
 *.typelib
 .dirstamp
 
+libabaco*.pc
 libabaco*.so*
 libabaco*.dll*
 libabaco*.dylib*

@@ -216,11 +216,16 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
 src/Makefile
 src/abaco/Makefile
+src/abaco/libabaco.pc
 src/jit/Makefile
+src/jit/libabaco_jit.pc
 src/jits/Makefile
+src/jits/libabaco_jits.pc
 src/mp/Makefile
 src/mp/closure/Makefile
+src/mp/libabaco_mp.pc
 src/ucl/Makefile
+src/ucl/libabaco_ucl.pc
 test/Makefile
 Makefile
 ])

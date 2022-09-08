@@ -34,8 +34,10 @@ pkglib_LTLIBRARIES=\
 
 pkginclude_HEADERS=\
 	libabaco_jits.h \
-	x86_64/jit.h \
 	$(VOID)
+
+pkgincludex8664dir=${pkgincludedir}/x86_64
+pkgincludex8664_HEADERS=x86_64/jit.h
 
 #
 # Binaries and libraries

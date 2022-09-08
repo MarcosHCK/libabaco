@@ -15,19 +15,18 @@
 # along with libabaco. If not, see <http://www.gnu.org/licenses/>.
 #
 
-*.[ao]
-*.la
-*.lai
-*.lo
-*.Po
-*.Plo
-*.Tpo
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+includedir=@includedir@
+libdir=@libdir@
+pkgincludedir=${includedir}/@PACKAGE@
+pkglibdir=${libdir}/@PACKAGE@
+version=@PACKAGE_VERSION_MAJOR@.@PACKAGE_VERSION_MINOR@.@PACKAGE_VERSION_MICRO@
 
-*.gir
-*.typelib
-.dirstamp
+Name: @PACKAGE_NAME@
+Description: Multi-precision mathematics library (Multi-precision interpreter)
+Requires: glib-2.0 >= 2.64, gobject-2.0 >= 2.64, gio-2.0 >= 2.64, libabaco = ${version}, libabaco_ucl = ${version}
+Version: ${version}
 
-libabaco*.pc
-libabaco*.so*
-libabaco*.dll*
-libabaco*.dylib*
+Libs: -L${pkglibdir} -labaco_mp
+Cflags: -I${pkgincludedir}/
