@@ -22,39 +22,38 @@ static const UclReg __empty__ = {0};
 
 /* private API */
 
-static void inline
+static inline void
 _reg_setup (UclReg* reg, UclRegType type)
 {
-  switch (reg->type)
+  switch (type)
   {
-  case UCL_REG_TYPE_VOID:
-  case UCL_REG_TYPE_POINTER:
+  assign:
+  default:
+    reg->type = type;
     break;
+
   case UCL_REG_TYPE_INTEGER:
     mpz_init (reg->integer);
-    break;
+    goto assign;
   case UCL_REG_TYPE_RATIONAL:
     mpq_init (reg->rational);
-    break;
+    goto assign;
   case UCL_REG_TYPE_REAL:
     mpfr_init (reg->real);
-    break;
+    goto assign;
   }
-
-  reg->type = type;
 }
 
-static void inline
+static inline void
 _reg_unset (UclReg* reg)
 {
   switch (reg->type)
   {
   cleanup:
     *reg = __empty__;
-    G_GNUC_FALLTHROUGH;
-  case UCL_REG_TYPE_POINTER:
-    reg->type = UCL_REG_TYPE_VOID;
     break;
+  case UCL_REG_TYPE_POINTER:
+    goto cleanup;
   case UCL_REG_TYPE_INTEGER:
     mpz_clear (reg->integer);
     goto cleanup;

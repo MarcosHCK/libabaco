@@ -21,6 +21,16 @@
 #include <bytecode.h>
 #include <glib.h>
 
+const gchar* output = NULL;
+gboolean benchmark = FALSE;
+gboolean printtree = FALSE;
+gboolean printcode = FALSE;
+
+#define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
+#define _g_bytes_unref0(var) ((var == NULL) ? NULL : (var = (g_bytes_unref (var), NULL)))
+#define _g_error_free0(var) ((var == NULL) ? NULL : (var = (g_error_free (var), NULL)))
+#define _g_free0(var) ((var == NULL) ? NULL : (var = (g_free (var), NULL)))
+
 const gchar* symbolkind[] =
 {
   "ABACO_AST_SYMBOL_KIND_CONSTANT",
@@ -286,7 +296,7 @@ return g_new0 (gdouble, stack->size);
 }
 
 static gdouble
-execute (GBytes* bytes)
+do_execute (GBytes* bytes)
 {
   gsize i, length;
   gdouble result = -1;
@@ -370,7 +380,9 @@ execute (GBytes* bytes)
               for (i = 1; i < opn; i++)
                 first /= stack [opcode->abc.b + i];
               break;
+
             default:
+              g_error ("Unknown function '%s'", op [0]);
               g_assert_not_reached ();
               break;
             }
@@ -392,14 +404,162 @@ execute (GBytes* bytes)
 return result;
 }
 
+static inline void
+do_report (GBytes* code, const gchar* expr)
+{
+  GString* buffer = NULL;
+  GError* tmp_err = NULL;
+
+  if (output != NULL)
+  {
+    gconstpointer ptr = NULL;
+    gsize length = 0;
+
+    ptr = g_bytes_get_data (code, &length);
+    g_file_set_contents (output, ptr, length, &tmp_err);
+    if (G_UNLIKELY (tmp_err != NULL))
+    {
+      g_critical
+      ("(%s): %s: %i: %s",
+       G_STRLOC,
+       g_quark_to_string
+       (tmp_err->domain),
+       tmp_err->code,
+       tmp_err->message);
+      g_error_free (tmp_err);
+      g_assert_not_reached ();
+    }
+  }
+
+  if (!benchmark)
+  {
+    g_print ("> '%s' = '%f'\r\n", code, do_execute (code));
+  }
+  else
+  {
+    const gdouble spt = (gdouble) CLOCKS_PER_SEC;
+    const gdouble mpt = spt / (gdouble) 1000;
+    const int tries = 100000;
+    const int reps = 10;
+    gdouble partial = 0;
+    gdouble result = 0;
+    gdouble last = 0;
+    clock_t src, dst;
+    int i, j;
+
+    buffer =
+    g_string_sized_new (128);
+    g_print ("trying with %i cycles, %i times\r\n", tries, reps);
+
+    for (i = 0; i < reps; i++)
+    {
+      for (j = 0; j < tries; j++)
+      {
+        src = clock ();
+        result = do_execute (code);
+        dst = clock ();
+
+        if (j == 0)
+        {
+          partial = (gdouble) (dst - src);
+          last = result;
+        }
+        else
+        {
+          if (result != last)
+            g_error ("Results differs");
+          partial += (gdouble) (dst - src);
+        }
+      }
+
+      partial /= (reps * tries);
+
+      g_string_append_printf (buffer, "> '%s'", expr);
+      g_string_append_printf (buffer, " = '%f'", last);
+      g_string_append_printf (buffer, " (took ");
+      g_string_append_printf (buffer, "%lf ticks, ", partial);
+      g_string_append_printf (buffer, "%lf micros, ", partial / mpt);
+      g_string_append_printf (buffer, "%lf seconds)", partial / spt);
+      g_print ("%.*s\r\n", buffer->len, buffer->str);
+      g_string_truncate (buffer, 0);
+    }
+
+    g_string_free (buffer, TRUE);
+  }
+}
+
+static inline GBytes*
+do_compile (AbacoRules* rules, AbacoAssembler* assembler, GBytes* expr)
+{
+  AbacoAstNode* tree = NULL;
+  const gchar* expr_ = NULL;
+  GError* tmp_err = NULL;
+  GBytes* code = NULL;
+  gsize length = 0;
+
+  expr_ = g_bytes_get_data (expr, &length);
+  tree = abaco_rules_parse (rules, expr_, length, &tmp_err);
+
+  if (G_UNLIKELY (tmp_err != NULL))
+  {
+    g_critical
+    ("(%s): %s: %i: %s",
+     G_STRLOC,
+     g_quark_to_string
+     (tmp_err->domain),
+     tmp_err->code,
+     tmp_err->message);
+    _g_error_free0 (tmp_err);
+    g_assert_not_reached ();
+  }
+  else
+  {
+    if (printtree)
+    {
+      print_tree (tree, 0);
+    }
+
+    code =
+    abaco_assembler_assemble (assembler, tree, &tmp_err);
+    abaco_ast_node_unref (tree);
+
+    if (G_UNLIKELY (tmp_err != NULL))
+    {
+      g_critical
+      ("(%s): %s: %i: %s",
+      G_STRLOC,
+      g_quark_to_string
+      (tmp_err->domain),
+      tmp_err->code,
+      tmp_err->message);
+      _g_bytes_unref0 (code);
+      _g_error_free0 (tmp_err);
+      g_assert_not_reached ();
+    }
+    else
+    if (printcode)
+    {
+      print_code (code);
+    }
+  }
+return code;
+}
+
 int
 main (int argc, char* argv [])
 {
   GError* tmp_err = NULL;
   GOptionContext* ctx = NULL;
+  const gchar* expression = NULL;
+
   GOptionEntry entries[] =
   {
-    {NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, NULL},
+    { "benchmark", 0, 0, G_OPTION_ARG_NONE, &benchmark, NULL, NULL },
+    { "print-tree", 0, 0, G_OPTION_ARG_NONE, &printtree, NULL, NULL },
+    { "print-code", 0, 0, G_OPTION_ARG_NONE, &printcode, NULL, NULL },
+    { "expression", 'e', 0, G_OPTION_ARG_STRING, &expression, NULL, "CODE" },
+    { "output", 'o', 0, G_OPTION_ARG_FILENAME, &output, NULL, "FILE" },
+    { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, NULL },
   };
 
   ctx =
@@ -412,116 +572,83 @@ main (int argc, char* argv [])
   g_option_context_free (ctx);
 
   if (G_UNLIKELY (tmp_err != NULL))
-    {
-      g_critical
-      ("(%s): %s: %i: %s",
-       G_STRLOC,
-       g_quark_to_string
-       (tmp_err->domain),
-       tmp_err->code,
-       tmp_err->message);
-      g_error_free (tmp_err);
-      g_assert_not_reached ();
-    }
+  {
+    g_critical
+    ("(%s): %s: %i: %s",
+     G_STRLOC,
+     g_quark_to_string
+     (tmp_err->domain),
+     tmp_err->code,
+     tmp_err->message);
+    g_error_free (tmp_err);
+    g_assert_not_reached ();
+  }
   else
+  {
+    AbacoRules* rules = NULL;
+    AbacoAssembler* assembler = NULL;
+    GBytes* expr = NULL;
+    GBytes* code = NULL;
+
+    rules = abaco_rules_new ();
+    assembler = abaco_assembler_new ();
+
+    abaco_rules_add_operator (rules, "[\\+]", FALSE, 2, FALSE, &tmp_err);
+      g_assert_no_error (tmp_err);
+    abaco_rules_add_operator (rules, "[\\-]", FALSE, 2, FALSE, &tmp_err);
+      g_assert_no_error (tmp_err);
+    abaco_rules_add_operator (rules, "[\\*]", FALSE, 3, FALSE, &tmp_err);
+      g_assert_no_error (tmp_err);
+    abaco_rules_add_operator (rules, "[\\/]", FALSE, 3, FALSE, &tmp_err);
+      g_assert_no_error (tmp_err);
+    abaco_rules_add_operator (rules, "[\\^]",  TRUE, 4, FALSE, &tmp_err);
+      g_assert_no_error (tmp_err);
+
+    if (expression != NULL)
     {
-      AbacoRules* rules = NULL;
-      AbacoAssembler* assembler = NULL;
-      AbacoAstNode* ast = NULL;
-      GBytes* code = NULL;
-      int i, j, k;
+      expr = g_bytes_new_static (expression, strlen (expression));
+      code = do_compile (rules, assembler, expr);
 
-      rules = abaco_rules_new ();
-      assembler = abaco_assembler_new ();
-
-      abaco_rules_add_operator (rules, "[\\+]", FALSE, 2, FALSE, &tmp_err);
-        g_assert_no_error (tmp_err);
-      abaco_rules_add_operator (rules, "[\\-]", FALSE, 2, FALSE, &tmp_err);
-        g_assert_no_error (tmp_err);
-      abaco_rules_add_operator (rules, "[\\*]", FALSE, 3, FALSE, &tmp_err);
-        g_assert_no_error (tmp_err);
-      abaco_rules_add_operator (rules, "[\\/]", FALSE, 3, FALSE, &tmp_err);
-        g_assert_no_error (tmp_err);
+      do_report (code, expression);
+      _g_bytes_unref0 (expr);
+      _g_bytes_unref0 (code);
+    }
+    else
+    {
+      gchar* contents = NULL;
+      gchar* quoted = NULL;
+      gsize length = 0;
+      int i;
 
       for (i = 1; i < argc; i++)
       {
-        g_print ("\r\n");
-        g_print ("> %s\r\n", argv [i]);
-
-        ast =
-        abaco_rules_parse (rules, argv [i], -1, &tmp_err);
+        g_file_get_contents (argv [i], &contents, &length, &tmp_err);
         if (G_UNLIKELY (tmp_err != NULL))
-          {
-            g_critical
-            ("(%s): %s: %i: %s",
-             G_STRLOC,
-             g_quark_to_string
-             (tmp_err->domain),
-             tmp_err->code,
-             tmp_err->message);
-            g_error_free (tmp_err);
-            g_object_unref (rules);
-            g_assert_not_reached ();
-          }
-
-        g_print ("\r\n");
-        print_tree (ast, 0);
-
-        code =
-        abaco_assembler_assemble (assembler, ast, &tmp_err);
-        if (G_UNLIKELY (tmp_err != NULL))
-          {
-            g_critical
-            ("(%s): %s: %i: %s",
-             G_STRLOC,
-             g_quark_to_string
-             (tmp_err->domain),
-             tmp_err->code,
-             tmp_err->message);
-            g_error_free (tmp_err);
-            g_object_unref (rules);
-            g_assert_not_reached ();
-          }
-
-        g_print ("\r\n");
-        print_code (code);
-        g_print ("\r\n");
-        disassemble (code);
-        g_print ("\r\n");
-
-        const gdouble spt = (gdouble) CLOCKS_PER_SEC;
-        const gdouble mpt = spt / (gdouble) 1000;
-        const int tries = 100000;
-        const int reps = 10;
-        gdouble result;
-        gdouble last;
-        int j;
-
-        for (j = 0; j < reps; j++)
         {
-          clock_t start = clock ();
-          for (k = 0; k < tries; k++)
-            result = execute (code);
-
-          if (j > 0 && result != last)
-            g_error ("Mismatching results for same input");
-          last = result;
-
-          clock_t stop = clock ();
-          gdouble took = (gdouble) (stop - start);
-                  took /= (gdouble) tries;
-          g_print ("took %lf ticks, %lf micros, %lf secs\r\n",
-                    took,
-                    took / mpt,
-                    took / spt);
+          g_critical
+          ("(%s): %s: %i: %s",
+           G_STRLOC,
+           g_quark_to_string
+           (tmp_err->domain),
+           tmp_err->code,
+           tmp_err->message);
+          g_error_free (tmp_err);
+          g_assert_not_reached ();
         }
 
-        g_print ("result %lf\r\n", result);
-        abaco_ast_node_unref (ast);
-      }
+        expr = g_bytes_new_take (contents, length);
+        code = do_compile (rules, assembler, expr);
+        quoted = g_strndup (contents, length);
 
-      g_object_unref (assembler);
-      g_object_unref (rules);
+        do_report (code, quoted);
+        _g_bytes_unref0 (expr);
+        _g_bytes_unref0 (code);
+        _g_free0 (quoted);
+      }
     }
+
+    _g_object_unref0 (assembler);
+    _g_object_unref0 (rules);
+  }
 return 0;
 }

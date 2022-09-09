@@ -234,17 +234,16 @@ _mp_stack_push_index (MpStack* stack, int index)
 
   switch (pmp->type)
   {
-  case MP_TYPE_NIL:
-    goto append;
   case MP_TYPE_VALUE:
     mp.type = MP_TYPE_VALUE;
     g_value_init (& mp.value, G_VALUE_TYPE (&pmp->value));
     g_value_copy (& pmp->value, & mp.value);
-    goto append;
+    G_GNUC_FALLTHROUGH;
+  case MP_TYPE_NIL:
+    g_array_append_vals (array, &mp, 1);
+    break;
   default:
     ucl_reg_copy ((UclReg*) &mp, (UclReg*) pmp);
-
-  append:
     g_array_append_vals (array, &mp, 1);
     break;
   }
