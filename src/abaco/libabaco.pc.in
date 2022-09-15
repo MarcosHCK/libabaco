@@ -24,7 +24,7 @@ pkglibdir=${libdir}/@PACKAGE@
 version=@PACKAGE_VERSION_MAJOR@.@PACKAGE_VERSION_MINOR@.@PACKAGE_VERSION_MICRO@
 
 Name: @PACKAGE_NAME@
-Description: Multi-precision mathematics library (Core)
+Description: libAbaco core library (parser and assembler)
 Requires: glib-2.0 >= 2.64, gobject-2.0 >= 2.64, gio-2.0 >= 2.64
 Version: ${version}
 

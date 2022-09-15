@@ -30,6 +30,7 @@
 # endif // _MSC_VER
 #endif // !UCL_EXPORT
 
+#define UCL_TYPE_REG (ucl_reg_get_type ())
 typedef struct _UclReg UclReg;
 
 typedef enum
@@ -45,6 +46,9 @@ typedef enum
 extern "C" {
 #endif // __cplusplus
 
+UCL_EXPORT GType
+ucl_reg_get_type (void) G_GNUC_CONST;
+
 struct _UclReg
 {
   union
@@ -56,7 +60,7 @@ struct _UclReg
   };
 
   UclRegType type;
-  guint shadow : 1;
+  guint shadow : 1 G_GNUC_DEPRECATED;
 } __attribute__ ((aligned (sizeof (gpointer))));
 
 /*

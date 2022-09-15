@@ -15,9 +15,13 @@
 # along with libabaco. If not, see <http://www.gnu.org/licenses/>.
 #
 
-#
-# Some variables
-#
+# Keep sync with
+# - src/abaco/Makefile.am
+# - src/jit/Makefile.am
+# - src/jits/Makefile.am
+# - src/mp/Makefile.am
+# - src/ucl/Makefile.am
+valapkgdir=${datarootdir}/vala/vapi
 
 EXTRA_DIST=
 CLEANFILES=
@@ -38,6 +42,11 @@ pkginclude_HEADERS=\
 
 pkgincludex8664dir=${pkgincludedir}/x86_64
 pkgincludex8664_HEADERS=x86_64/jit.h
+
+valapkg_DATA=\
+	libabaco_jits.deps \
+	libabaco_jits.vapi \
+	$(VOID)
 
 #
 # Binaries and libraries

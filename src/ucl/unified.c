@@ -20,6 +20,33 @@
 
 static const UclReg __empty__ = {0};
 
+/* boxed API */
+
+static gpointer
+ucl_reg_boxed_copy (gpointer pself)
+{
+  UclReg* self = pself;
+  UclReg* copy = g_slice_new (UclReg);
+
+  ucl_reg_copy (copy, self);
+return (gpointer) copy;
+}
+
+static void
+ucl_reg_boxed_free (gpointer pself)
+{
+  UclReg* self = pself;
+
+  ucl_reg_unset (self);
+  g_slice_free (UclReg, pself);
+}
+
+G_DEFINE_BOXED_TYPE
+(UclReg,
+ ucl_reg,
+ ucl_reg_boxed_copy,
+ ucl_reg_boxed_free);
+
 /* private API */
 
 static inline void

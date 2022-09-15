@@ -15,9 +15,13 @@
 # along with libabaco. If not, see <http://www.gnu.org/licenses/>.
 #
 
-#
-# Some variables
-#
+# Keep sync with
+# - src/abaco/Makefile.am
+# - src/jit/Makefile.am
+# - src/jits/Makefile.am
+# - src/mp/Makefile.am
+# - src/ucl/Makefile.am
+valapkgdir=${datarootdir}/vala/vapi
 
 EXTRA_DIST=
 CLEANFILES=
@@ -42,6 +46,11 @@ pkglib_LTLIBRARIES=\
 pkginclude_HEADERS=\
 	bytecode.h \
 	libabaco.h \
+	$(VOID)
+
+valapkg_DATA=\
+	libabaco.deps \
+	libabaco.vapi \
 	$(VOID)
 
 #
