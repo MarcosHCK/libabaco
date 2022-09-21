@@ -56,7 +56,10 @@ valapkg_DATA=\
 libabaco_la_SOURCES=\
 	ast/node.vala \
 	ast/nodes.vala \
+	compiler.vala \
+	lexer.vala \
 	libabaco.c \
+	token.vala \
 	$(VOID)
 libabaco_la_CFLAGS=\
 	$(GIO_CFLAGS) \
@@ -90,6 +93,7 @@ AM_VALAFLAGS=\
 	--library libabaco \
 	--pkg config \
 	--pkg chain \
+	--pkg patch \
 	-D DEBUG=${DEBUG} \
 	-D DEVELOPER=${DEVELOPER} \
 	$(VOID)

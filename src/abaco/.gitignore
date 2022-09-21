@@ -36,3 +36,6 @@ libabaco.h
 
 ast/node.c
 ast/nodes.c
+compiler.c
+lexer.c
+token.c

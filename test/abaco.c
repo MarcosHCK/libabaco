@@ -16,11 +16,11 @@
  *
  */
 #include <config.h>
+#include <libabaco.h>
 #include <glib.h>
 
 const gchar* output = NULL;
 gboolean benchmark = FALSE;
-gboolean printtree = FALSE;
 gboolean printcode = FALSE;
 
 #define _g_object_unref0(var) ((var == NULL) ? NULL : (var = (g_object_unref (var), NULL)))
@@ -171,7 +171,6 @@ main (int argc, char* argv [])
   GOptionEntry entries[] =
   {
     { "benchmark", 0, 0, G_OPTION_ARG_NONE, &benchmark, NULL, NULL },
-    { "print-tree", 0, 0, G_OPTION_ARG_NONE, &printtree, NULL, NULL },
     { "print-code", 0, 0, G_OPTION_ARG_NONE, &printcode, NULL, NULL },
     { "expression", 'e', 0, G_OPTION_ARG_STRING, &expression, NULL, "CODE" },
     { "output", 'o', 0, G_OPTION_ARG_FILENAME, &output, NULL, "FILE" },
@@ -201,13 +200,29 @@ main (int argc, char* argv [])
   }
   else
   {
+    AbacoCompiler* compiler = NULL;
     GBytes* expr = NULL;
     GBytes* code = NULL;
+
+    compiler = abaco_compiler_new (FALSE);
 
     if (expression != NULL)
     {
       expr = g_bytes_new_static (expression, strlen (expression));
-      code = g_bytes_new_static ("ja", 3);
+      code = abaco_compiler_compile_bytes (compiler, expr, &tmp_err);
+
+      if (G_UNLIKELY (tmp_err != NULL))
+      {
+        g_critical
+        ("(%s): %s: %i: %s",
+         G_STRLOC,
+         g_quark_to_string
+         (tmp_err->domain),
+         tmp_err->code,
+         tmp_err->message);
+        g_error_free (tmp_err);
+        g_assert_not_reached ();
+      }
 
       do_report (code, expression);
       _g_bytes_unref0 (expr);
@@ -237,7 +252,21 @@ main (int argc, char* argv [])
         }
 
         expr = g_bytes_new_take (contents, length);
-        code = g_bytes_new_static ("ja", 3);
+        code = abaco_compiler_compile_bytes (compiler, expr, &tmp_err);
+
+        if (G_UNLIKELY (tmp_err != NULL))
+        {
+          g_critical
+          ("(%s): %s: %i: %s",
+           G_STRLOC,
+           g_quark_to_string
+           (tmp_err->domain),
+           tmp_err->code,
+           tmp_err->message);
+          g_error_free (tmp_err);
+          g_assert_not_reached ();
+        }
+
         quoted = g_strndup (contents, length);
 
         do_report (code, quoted);
@@ -246,6 +275,8 @@ main (int argc, char* argv [])
         _g_free0 (quoted);
       }
     }
+
+    _g_object_unref0 (compiler);
   }
 return 0;
 }
