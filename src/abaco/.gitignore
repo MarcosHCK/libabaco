@@ -34,9 +34,4 @@ libabaco*.dylib*
 libabaco.vapi
 libabaco.h
 
-assembler.c
-ast.c
-closure.c
-parser.c
-rules.c
-vm.c
+ast/node.c

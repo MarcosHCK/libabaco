@@ -54,12 +54,14 @@ valapkg_DATA=\
 #
 
 libabaco_la_SOURCES=\
+	ast/node.vala \
 	libabaco.c \
 	$(VOID)
 libabaco_la_CFLAGS=\
 	$(GIO_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
+	-Iast/ \
 	-DG_LOG_DOMAIN=\"Abaco\" \
 	-D__LIBABACO_INSIDE__=1 \
 	$(VOID)
@@ -78,6 +80,7 @@ libabaco_la_LDFLAGS=\
 #
 
 AM_VALAFLAGS=\
+	--vapidir=ast/ \
 	--vapidir=vapi/ \
 	--vapi-comments \
 	--hide-internal \
@@ -85,6 +88,7 @@ AM_VALAFLAGS=\
 	--header libabaco.h \
 	--library libabaco \
 	--pkg config \
+	--pkg chain \
 	-D DEBUG=${DEBUG} \
 	-D DEVELOPER=${DEVELOPER} \
 	$(VOID)
