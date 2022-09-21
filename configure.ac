@@ -157,17 +157,8 @@ fi
 
 AC_SUBST([DYNASM_CFLAGS], [-I\${top_builddir}/build/dynasm/])
 AC_SUBST([DYNASM_LIBS], [-I\${top_builddir}/build/dynasm/])
-
 AC_SUBST([ABACO_CFLAGS], [-I\${top_builddir}/src/abaco/])
 AC_SUBST([ABACO_LIBS], [\${top_builddir}/src/abaco/libabaco.la])
-AC_SUBST([ABACO_JIT_CFLAGS], [-I\${top_builddir}/src/jit/])
-AC_SUBST([ABACO_JIT_LIBS], [\${top_builddir}/src/jit/libabaco_jit.la])
-AC_SUBST([ABACO_JITS_CFLAGS], [-I\${top_builddir}/src/jits/])
-AC_SUBST([ABACO_JITS_LIBS], [\${top_builddir}/src/jits/libabaco_jits.la])
-AC_SUBST([ABACO_MP_CFLAGS], [-I\${top_builddir}/src/mp/])
-AC_SUBST([ABACO_MP_LIBS], [\${top_builddir}/src/mp/libabaco_mp.la])
-AC_SUBST([ABACO_UCL_CFLAGS], [-I\${top_builddir}/src/ucl/])
-AC_SUBST([ABACO_UCL_LIBS], [\${top_builddir}/src/ucl/libabaco_ucl.la])
 
 #
 # Check for libraries using pkg-config
@@ -217,15 +208,6 @@ AC_CONFIG_FILES([
 src/Makefile
 src/abaco/Makefile
 src/abaco/libabaco.pc
-src/jit/Makefile
-src/jit/libabaco_jit.pc
-src/jits/Makefile
-src/jits/libabaco_jits.pc
-src/mp/Makefile
-src/mp/closure/Makefile
-src/mp/libabaco_mp.pc
-src/ucl/Makefile
-src/ucl/libabaco_ucl.pc
 test/Makefile
 Makefile
 ])

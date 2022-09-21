@@ -17,10 +17,6 @@
 
 # Keep sync with
 # - src/abaco/Makefile.am
-# - src/jit/Makefile.am
-# - src/jits/Makefile.am
-# - src/mp/Makefile.am
-# - src/ucl/Makefile.am
 valapkgdir=${datarootdir}/vala/vapi
 
 EXTRA_DIST=
@@ -44,7 +40,6 @@ pkglib_LTLIBRARIES=\
 	$(VOID)
 
 pkginclude_HEADERS=\
-	bytecode.h \
 	libabaco.h \
 	$(VOID)
 
@@ -58,22 +53,10 @@ valapkg_DATA=\
 # - sources
 #
 
-EXTRA_DIST+=\
-	astpatch.h \
-	symbol.h \
-	$(VOID)
-
 libabaco_la_SOURCES=\
-	assembler.vala \
-	ast.vala \
-	bytecode.c \
 	libabaco.c \
-	parser.vala \
-	rules.vala \
-	vm.vala \
 	$(VOID)
 libabaco_la_CFLAGS=\
-	$(ABACO_AST_CFLAGS) \
 	$(GIO_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GOBJECT_CFLAGS) \
@@ -81,7 +64,6 @@ libabaco_la_CFLAGS=\
 	-D__LIBABACO_INSIDE__=1 \
 	$(VOID)
 libabaco_la_LIBADD=\
-	$(ABACO_AST_LIBS) \
 	$(GIO_LIBS) \
 	$(GLIB_LIBS) \
 	$(GOBJECT_LIBS) \
@@ -96,7 +78,6 @@ libabaco_la_LDFLAGS=\
 #
 
 AM_VALAFLAGS=\
-	--vapidir=. \
 	--vapidir=vapi/ \
 	--vapi-comments \
 	--hide-internal \
@@ -104,9 +85,6 @@ AM_VALAFLAGS=\
 	--header libabaco.h \
 	--library libabaco \
 	--pkg config \
-	--pkg bytecode \
-	--pkg patch \
-	--pkg symbol \
 	-D DEBUG=${DEBUG} \
 	-D DEVELOPER=${DEVELOPER} \
 	$(VOID)

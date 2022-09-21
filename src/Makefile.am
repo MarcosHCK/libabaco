@@ -22,11 +22,7 @@ VOID=
 #
 
 SUBDIRS=\
-	abaco \
-	ucl \
-	mp \
-	jit \
-	jits
+	abaco
 
 #
 # pkg-config
@@ -36,8 +32,4 @@ pkgconfigdir=${libdir}/pkgconfig
 
 pkgconfig_DATA=\
 	abaco/libabaco.pc \
-	jit/libabaco_jit.pc \
-	jits/libabaco_jits.pc \
-	mp/libabaco_mp.pc \
-	ucl/libabaco_ucl.pc \
 	$(VOID)
