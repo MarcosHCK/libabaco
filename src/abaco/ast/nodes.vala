@@ -1,0 +1,105 @@
+/* Copyright 2021-2025 MarcosHCK
+ * This file is part of libabaco.
+ *
+ * libabaco is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * libabaco is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with libabaco. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+namespace Abaco.Ast
+{
+  internal class Variable : Node
+  {
+    public string id { get; private set; }
+
+    /* constructor */
+
+    public Variable (string id)
+    {
+      base ();
+      this.id = id;
+    }
+  }
+
+  internal class Constant : Variable
+  {
+    public string value { get; private set; }
+
+    /* constructor */
+
+    public Constant (string id, string value)
+    {
+      base (id);
+      this.value = value;
+    }
+  }
+
+  internal class Scope : Node
+  {
+    /* public API */
+
+    public void append (Node child) { Chain.append (ref chain, ref child.chain); }
+    public void prepend (Node child) { Chain.prepend (ref chain, ref child.chain); }
+    public uint n_children () { return Chain.n_children (ref chain); }
+
+    public void children_foreach (GLib.Func<unowned Node> callback)
+    {
+      unowned Chain? child = chain.children;
+      while (child != null)
+      {
+        callback ((Node) child.self);
+        child = child.next;
+      }
+    }
+  }
+
+  internal class RValue : Scope { }
+
+  internal abstract class Conditional : Node
+  {
+    public unowned RValue condition { get; private set; }
+    public unowned Scope direct { get; private set; }
+
+    /* constructor */
+
+    protected Conditional ()
+    {
+      base ();
+      var condition_ = new RValue ();
+      var direct_ = new Scope ();
+
+      condition = condition_;
+      direct = direct_;
+
+      Chain.append (ref chain, ref condition_.chain);
+      Chain.append (ref chain, ref direct_.chain);
+    }
+  }
+
+  internal class While : Conditional { }
+
+  internal class If : Conditional
+  {
+    public unowned Scope reverse { get; private set; }
+
+    /* constructor */
+
+    public If ()
+    {
+      base ();
+      var reverse_ = new Scope ();
+      reverse = reverse_;
+      Chain.append (ref chain, ref reverse_.chain);
+    }
+  }
+}

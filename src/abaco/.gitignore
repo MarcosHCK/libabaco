@@ -35,3 +35,4 @@ libabaco.vapi
 libabaco.h
 
 ast/node.c
+ast/nodes.c

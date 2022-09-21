@@ -20,25 +20,10 @@ namespace Abaco.Ast
 {
   internal abstract class Node
   {
-    private Chain chain;
+    protected Chain chain;
     private Datalist<string?> notes;
-    public string token { get; private set; }
 
     /* public API */
-
-    public void append (Node child) { Chain.append (ref chain, ref child.chain); }
-    public void prepend (Node child) { Chain.prepend (ref chain, ref child.chain); }
-    public uint n_children () { return Chain.n_children (ref chain); }
-
-    public void children_foreach (GLib.Func<unowned Node> callback)
-    {
-      unowned Chain? child = chain.children;
-      while (child != null)
-      {
-        callback ((Node) child.self);
-        child = child.next;
-      }
-    }
 
     public void set_note (string index, string content) { notes.set_data (index, content); }
     public void set_note_by_id (GLib.Quark index, string content) { notes.id_set_data (index, content); }
@@ -49,10 +34,10 @@ namespace Abaco.Ast
 
     /* constructors */
 
-    protected Node (string token)
+    protected Node ()
     {
       chain.self = this;
-      this.token = token;
+      notes = Datalist<string?> ();
     }
 
     ~Node ()

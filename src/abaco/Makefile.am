@@ -55,6 +55,7 @@ valapkg_DATA=\
 
 libabaco_la_SOURCES=\
 	ast/node.vala \
+	ast/nodes.vala \
 	libabaco.c \
 	$(VOID)
 libabaco_la_CFLAGS=\
