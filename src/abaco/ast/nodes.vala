@@ -65,6 +65,70 @@ namespace Abaco.Ast
 
   internal class RValue : Scope { }
 
+  internal class Declaration : Scope
+  {
+    public string id { get; private set; }
+
+    /* constructor */
+
+    public Declaration (string id)
+    {
+      base ();
+      this.id = id;
+    }
+  }
+
+  internal class Operator : Declaration
+  {
+    public uint precedence { get; private set; }
+    public string assoc { get; private set; }
+
+    /* constructor */
+
+    public Operator (string id, uint precedence, string assoc)
+    {
+      base (id);
+      this.precedence = precedence;
+      this.assoc = assoc;
+    }
+  }
+
+  internal class Assign : RValue
+  {
+    public unowned Variable variable { get; private set; }
+    public unowned RValue rvalue {get; private set; }
+
+    /* constructor */
+
+    public Assign (string id)
+    {
+      base ();
+      var variable_ = new Variable (id);
+      var rvalue_ = new RValue ();
+
+      variable = variable_;
+      rvalue = rvalue_;
+
+      Chain.append (ref chain, ref variable_.chain);
+      Chain.append (ref chain, ref rvalue_.chain);
+    }
+  }
+
+  internal class Call : RValue
+  {
+    public string id { get; private set; }
+    public bool ccall { get; private set; }
+
+    /* constructor */
+
+    public Call (string id, bool ccall)
+    {
+      base ();
+      this.id = id;
+      this.ccall = ccall;
+    }
+  }
+
   internal abstract class Conditional : Node
   {
     public unowned RValue condition { get; private set; }

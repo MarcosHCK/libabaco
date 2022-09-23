@@ -38,6 +38,7 @@ namespace Abaco
     {
       var stream = new GLib.DataInputStream (input);
       var tokens = (new Lexer (naked)).tokenize (stream);
+      var tree = (new Parser (naked)).parse (tokens);
     return null;
     }
 

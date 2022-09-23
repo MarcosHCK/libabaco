@@ -61,5 +61,12 @@ namespace Abaco
 
     public uint line;
     public uint column;
+
+    /* public API */
+
+    public string locate ()
+    {
+      return @"$line: $column: ";
+    }
   }
 }
