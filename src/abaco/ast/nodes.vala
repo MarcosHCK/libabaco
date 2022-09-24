@@ -18,34 +18,29 @@
 
 namespace Abaco.Ast
 {
-  internal class Variable : Node
-  {
-    public string id { get; private set; }
-
-    /* constructor */
-
-    public Variable (string id)
-    {
-      base ();
-      this.id = id;
-    }
-  }
-
-  internal class Constant : Variable
-  {
-    public string value { get; private set; }
-
-    /* constructor */
-
-    public Constant (string id, string value)
-    {
-      base (id);
-      this.value = value;
-    }
-  }
-
   internal class Scope : Node
   {
+    /* debug API */
+
+#if DEVELOPER == 1
+
+    public override string debug (size_t spaces)
+    {
+      var partial = base.debug (spaces);
+      unowned var child = (Chain?) chain.children;
+      unowned var node = (Node?) null;
+
+      while (child != null)
+      {
+        node = (Node) child.self;
+        partial += "\r\n" + node.debug (spaces + 1);
+        child = child.next;
+      }
+    return partial;
+    }
+
+#endif // DEVELOPER
+
     /* public API */
 
     public void append (Node child) { Chain.append (ref chain, ref child.chain); }
@@ -63,69 +58,177 @@ namespace Abaco.Ast
     }
   }
 
-  internal class RValue : Scope { }
+  internal interface RValue : Node { }
 
-  internal class Declaration : Scope
+  internal class Constant : Node, RValue
   {
-    public string id { get; private set; }
+    public string value { get; private set; }
+
+    /* debug API */
+
+#if DEVELOPER == 1
+
+    public override string debug (size_t spaces)
+    {
+      return ("%s, value '%s'").printf (base.debug (spaces), value);
+    }
+
+#endif // DEVELOPER
 
     /* constructor */
 
-    public Declaration (string id)
+    public Constant (string value)
+    {
+      base ();
+      this.value = value;
+    }
+  }
+
+  internal class Variable : Node, RValue
+  {
+    public string id { get; private set; }
+
+    /* debug API */
+
+#if DEVELOPER == 1
+
+    public override string debug (size_t spaces)
+    {
+      return ("%s, id '%s'").printf (base.debug (spaces), id);
+    }
+
+#endif // DEVELOPER
+
+    /* constructor */
+
+    public Variable (string id)
     {
       base ();
       this.id = id;
     }
   }
 
-  internal class Operator : Declaration
+  internal class Function : Variable
   {
-    public uint precedence { get; private set; }
-    public string assoc { get; private set; }
+    public unowned Scope scope { get; private set; }
+
+    /* debug API */
+
+#if DEVELOPER == 1
+
+    public override string debug (size_t spaces)
+    {
+      return base.debug (spaces)
+            + "\r\n"
+            + scope.debug (spaces + 1);
+    }
+
+#endif // DEVELOPER
 
     /* constructor */
 
-    public Operator (string id, uint precedence, string assoc)
+    public Function (string id, Scope scope)
+    {
+      base (id);
+      this.scope = scope;
+      Chain.append (ref chain, ref scope.chain);
+    }
+  }
+
+  internal class Operator : Variable
+  {
+    public unowned Scope scope { get; private set; }
+    public uint precedence { get; private set; }
+    public string assoc { get; private set; }
+
+    /* debug API */
+
+#if DEVELOPER == 1
+
+    public override string debug (size_t spaces)
+    {
+      return ("%s, precedence %u, assoc '%s'").printf
+              (base.debug (spaces), precedence, assoc)
+            + "\r\n"
+            + scope.debug (spaces + 1);
+    }
+
+#endif // DEVELOPER
+
+    /* constructor */
+
+    public Operator (string id, uint precedence, string assoc, Scope scope)
     {
       base (id);
       this.precedence = precedence;
       this.assoc = assoc;
+      this.scope = scope;
+      Chain.append (ref chain, ref scope.chain);
     }
   }
 
-  internal class Assign : RValue
+  internal class Assign : Node, RValue
   {
     public unowned Variable variable { get; private set; }
     public unowned RValue rvalue {get; private set; }
 
+    /* debug API */
+
+#if DEVELOPER == 1
+
+    public override string debug (size_t spaces)
+    {
+      return base.debug (spaces)
+            + "\r\n"
+            + variable.debug (spaces + 1)
+            + "\r\n"
+            + rvalue.debug (spaces + 1);
+    }
+
+#endif // DEVELOPER
+
     /* constructor */
 
-    public Assign (string id)
+    public Assign (Variable variable, RValue rvalue)
     {
       base ();
-      var variable_ = new Variable (id);
-      var rvalue_ = new RValue ();
-
-      variable = variable_;
-      rvalue = rvalue_;
-
-      Chain.append (ref chain, ref variable_.chain);
-      Chain.append (ref chain, ref rvalue_.chain);
+      this.variable = variable;
+      this.rvalue = rvalue;
+      Chain.append (ref chain, ref variable.chain);
+      Chain.append (ref chain, ref rvalue.chain);
     }
   }
 
-  internal class Call : RValue
+  internal class Call : Node, RValue
   {
-    public string id { get; private set; }
+    public string name { get; private set; }
     public bool ccall { get; private set; }
+    public unowned Scope arguments { get; private set; }
+
+    /* debug API */
+
+#if DEVELOPER == 1
+
+    public override string debug (size_t spaces)
+    {
+      return ("%s, name '%s', ccall '%s'").printf
+              (base.debug (spaces), name,
+                ccall ? "true" : "false")
+              + "\r\n"
+              + arguments.debug (spaces + 1);
+    }
+
+#endif // DEVELOPER
 
     /* constructor */
 
-    public Call (string id, bool ccall)
+    public Call (string name, bool ccall, Scope arguments)
     {
       base ();
-      this.id = id;
+      this.name = name;
       this.ccall = ccall;
+      this.arguments = arguments;
+      Chain.append (ref chain, ref arguments.chain);
     }
   }
 
@@ -136,21 +239,25 @@ namespace Abaco.Ast
 
     /* constructor */
 
-    protected Conditional ()
+    protected Conditional (RValue condition, Scope direct)
     {
       base ();
-      var condition_ = new RValue ();
-      var direct_ = new Scope ();
-
-      condition = condition_;
-      direct = direct_;
-
-      Chain.append (ref chain, ref condition_.chain);
-      Chain.append (ref chain, ref direct_.chain);
+      this.condition = condition;
+      this.direct = direct;
+      Chain.append (ref chain, ref condition.chain);
+      Chain.append (ref chain, ref direct.chain);
     }
   }
 
-  internal class While : Conditional { }
+  internal class While : Conditional
+  {
+    /* constructor */
+
+    public While (RValue condition, Scope direct)
+    {
+      base (condition, direct);
+    }
+  }
 
   internal class If : Conditional
   {
@@ -158,12 +265,11 @@ namespace Abaco.Ast
 
     /* constructor */
 
-    public If ()
+    public If (RValue condition, Scope direct, Scope reverse)
     {
-      base ();
-      var reverse_ = new Scope ();
-      reverse = reverse_;
-      Chain.append (ref chain, ref reverse_.chain);
+      base (condition, direct);
+      this.reverse = reverse;
+      Chain.append (ref chain, ref reverse.chain);
     }
   }
 }

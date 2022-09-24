@@ -59,6 +59,7 @@ libabaco_la_SOURCES=\
 	compiler.vala \
 	lexer.vala \
 	libabaco.c \
+	literal.vala \
 	parser.vala \
 	token.vala \
 	$(VOID)

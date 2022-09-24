@@ -38,5 +38,6 @@ ast/node.c
 ast/nodes.c
 compiler.c
 lexer.c
+literal.c
 parser.c
 token.c

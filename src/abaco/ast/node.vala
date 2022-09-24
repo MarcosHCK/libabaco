@@ -27,26 +27,11 @@ namespace Abaco.Ast
 
 #if DEVELOPER == 1
 
-    private void debug_inner (int spaces)
+    public virtual string debug (size_t spaces)
     {
       var type = Type.from_instance (this);
       var pre = string.nfill (spaces * 2, ' ');
-      unowned var child = (Chain?) null;
-      unowned var node = (Node?) null;
-
-      print ("%s- '%s'\r\n", pre, type.name ());
-      child = chain.children;
-      while (child != null)
-      {
-        node = (Node) child.self;
-        node.debug_inner (spaces + 1);
-        child = child.next;
-      }
-    }
-
-    public void debug ()
-    {
-      debug_inner (0);
+      return ("%s- '%s'").printf (pre, type.name ());
     }
 
 #endif // DEVELOPER

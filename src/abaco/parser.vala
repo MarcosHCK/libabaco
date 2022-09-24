@@ -29,108 +29,14 @@ namespace Abaco
   internal sealed class Parser : GLib.Object
   {
     public bool naked { get; construct; }
-    public bool freezed { get; set; default = false; }
-
-    const string ASSOC_LEFT = "left";
-    const string ASSOC_RIGHT = "right";
-
-    /* type API */
-
-    private enum LiteralType
-    {
-      STRING,
-      NUMBER,
-    }
-
-    private struct Literal
-    {
-      public LiteralType type;
-      public string value;
-      public uint @base;
-
-      /* public API */
-
-      public uint to_uint () throws GLib.Error
-      {
-        var result = (uint) 0;
-        var unparsed = (string) null;
-        if (!uint.try_parse (value, out result, out unparsed, @base))
-          throw new ParserError.LITERAL ("Literal doesn't fit in a unsigned int representation");
-        if (unparsed != null && unparsed.length > 0)
-          throw new ParserError.LITERAL ("'%s' junk after translation", unparsed);
-      return result;
-      }
-
-      /* constructor */
-
-      public Literal (string expr) throws GLib.Error
-      {
-        switch (expr.get_char ())
-        {
-          case (unichar) '\'':
-          case (unichar) '\"':
-            type = LiteralType.STRING;
-            value = expr.substring (0, (long) (((char*) expr.index_of_nth_char (-1)) - ((char*) expr)));
-            break;
-          default:
-            {
-              unowned string value = expr;
-              unowned string suffix = expr;
-              unowned uint @base = 10;
-
-              do
-              {
-                var c = suffix.get_char ();
-
-                if (c == (unichar) 0)
-                {
-                  suffix = null;
-                  break;
-                }
-
-                if (!c.isxdigit ())
-                {
-                  switch (c)
-                  {
-                    case 'b':
-                      @base = 2;
-                      break;
-                    case 'o':
-                      @base = 8;
-                      break;
-                    case 'd':
-                      @base = 10;
-                      break;
-                    case 'h':
-                      @base = 16;
-                      break;
-                    default:
-                      throw new ParserError.LITERAL ("Unknown literal suffix %s", suffix);
-                      break;
-                  }
-
-                  if (suffix.char_count () > 1)
-                    throw new ParserError.LITERAL ("Unknown literal suffix %s", suffix);
-
-                  break;
-                }
-
-                suffix = suffix.next_char ();
-              } while (true);
-  
-              this.value = value.substring (0, (long) (((char*) suffix) - ((char*) value)));
-              this.@base = @base;
-            }
-            break;
-        }
-      }
-    }
+    private bool freezed { get; set; default = false; }
 
     /* private API */
 
-    private void define_operator (GLib.Queue<Token?> tokens, Ast.Scope scope, Token? token) throws GLib.Error
+    private Ast.Operator define_operator (GLib.Queue<Token?> tokens, Token? token) throws GLib.Error
     {
       Token? next;
+      var scope = (Ast.Scope) null;
       unowned uint precedence = 0;
       unowned string assoc = null;
 
@@ -156,10 +62,10 @@ namespace Abaco
         {
           assoc = next.token;
           if (assoc == "left")
-            assoc = ASSOC_LEFT;
+            assoc = TokenClass.ASSOC_LEFT;
           else
           if (assoc == "right")
-            assoc = ASSOC_RIGHT;
+            assoc = TokenClass.ASSOC_RIGHT;
           else
             throw new ParserError.EXPECTED_TOKEN ("%s: Expected 'left' or 'right', got '%s'", next.locate (), assoc);
         }
@@ -174,54 +80,129 @@ namespace Abaco
           throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), next.token);
         else
         {
-          var decl = new Ast.Operator (token.token, precedence, assoc);
-          parse_block (tokens, decl, next);
-          scope.append (decl);
+          scope = parse_block (tokens, next);
+          return new Ast.Operator (token.token, precedence, assoc, scope);
         }
       }
     }
 
-    private void parse_rvalue (GLib.Queue<Token?> tokens, Ast.RValue scope) throws GLib.Error
+    private Ast.RValue? parse_rvalue (GLib.Queue<Token?> tokens, Token? begin) throws GLib.Error
     {
-      assert_not_reached ();
-    }
-
-    private void parse_call (GLib.Queue<Token?> tokens, Ast.Call scope, Token? token) throws GLib.Error
-    {
-      assert_not_reached ();
-    }
-
-    private void parse_identifier (GLib.Queue<Token?> tokens, Ast.Scope scope, Token? token) throws GLib.Error
-    {
-      Token? next;
-
-      next = tokens.pop_tail ();
-      if (next == null)
-        throw new ParserError.EXPECTED_TOKEN ("%s: Unexpected end of input after call statement", token.locate ());
-      else
+      var rvalue = (Ast.RValue?) null;
+      var token = (Token?) null;
+      
+      while ((token = tokens.pop_tail ()) != null)
       {
-        if (next.klass.kind != TokenType.SEPARATOR)
-          throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), next.token);
-        else
+        unowned var klass = token.klass;
+        unowned var expr = token.token;
+
+        print ("r %u:%u '%s' '%s'\r\n", token.line, token.column, klass.kind.to_string (), expr);
+
+        switch (klass.kind)
         {
-          if (next.token == "(")
-          {
-            var call = new Ast.Call (token.token, false);
-            parse_call (tokens, call, next);
-            scope.append (call);
-          }
-          else
-          if (next.token == "=")
-          {
-            var assign = new Ast.Assign (token.token);
-            parse_rvalue (tokens, assign.rvalue);
-            scope.append (assign);
-          }
+          default:
+            throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", token.locate (), token.token);
         }
       }
+    return rvalue;
     }
 
-    private void parse_extern (GLib.Queue<Token?> tokens, Ast.Scope scope, Token? token) throws GLib.Error
+    private Ast.RValue parse_call (GLib.Queue<Token?> tokens, Token? identifier, Token? next, bool ccall) throws GLib.Error
+    {
+      var arguments = new Ast.Scope ();
+      var call = new Ast.Call (identifier.token, ccall, arguments);
+      var extra = new GLib.Queue<Token?> ();
+      var rvalue = (Ast.RValue) null;
+      var last = (Token?) identifier;
+      var token = (Token?) null;
+      int balance = 1;
+
+      while ((token = tokens.pop_tail ()) != null)
+      {
+        unowned var klass = token.klass;
+        unowned var expr = token.token;
+
+        switch (klass.kind)
+        {
+          case TokenType.SEPARATOR:
+            {
+              if (expr == "(")
+                balance += 1;
+              else
+              if (expr == ")")
+              {
+                balance -= 1;
+                if (balance == 0)
+                {
+                  rvalue = parse_rvalue (extra, last);
+                  if (rvalue != null)
+                    arguments.append (rvalue);
+                  return call;
+                }
+              }
+              else
+              if (expr == ",")
+              {
+                if (balance == 1)
+                {
+                  rvalue = parse_rvalue (extra, token);
+                  if (rvalue == null)
+                    throw new ParserError.EXPECTED_TOKEN ("%s: Expected rvalue as argument", identifier.locate ());
+
+                  arguments.append (rvalue);
+                  extra.clear ();
+                  last = token;
+                }
+              }
+              else
+                throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", token.locate (), token.token);
+            }
+            break;
+          default:
+            extra.push_head (token);
+            break;
+        }
+      }
+
+      throw new ParserError.EXPECTED_TOKEN ("%s: Unexpected end of input while parsing call arguments", next.locate ());
+    }
+
+    private Ast.RValue parse_assign (GLib.Queue<Token?> tokens, Token? identifier, Token? begin) throws GLib.Error
+    {
+      var extra = new GLib.Queue<Token?> ();
+      var variable = (Ast.Variable) null;
+      var rvalue = (Ast.RValue) null;
+      var next = (Token?) null;
+
+      while ((next = tokens.pop_tail ()) != null)
+      {
+        unowned var klass = next.klass;
+        unowned var expr = next.token;
+
+        switch (klass.kind)
+        {
+          case TokenType.SEPARATOR:
+            {
+              if (expr == ";")
+              {
+                variable = new Ast.Variable (identifier.token);
+                rvalue = parse_rvalue (extra, begin);
+                if (rvalue == null)
+                  throw new ParserError.EXPECTED_TOKEN ("%s: Expected rvalue for assigment", begin.locate ());
+                return new Ast.Assign (variable, rvalue);
+              }
+            }
+            break;
+          default:
+            extra.push_head (next);
+            break;
+        }
+      }
+
+      throw new ParserError.EXPECTED_TOKEN ("%s: Unexpected end of input while parsing rvalue", begin.locate ());
+    }
+
+    private Ast.RValue parse_extern (GLib.Queue<Token?> tokens, Token? token) throws GLib.Error
     {
       Token? next;
       Token? identifier;
@@ -246,62 +227,92 @@ namespace Abaco
           throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), next.token);
         else
         {
-          var call = new Ast.Call (identifier.token, true);
-          parse_call (tokens, call, identifier);
-          scope.append (call);
+          return parse_call (tokens, identifier, next, true);
         }
       }
     }
 
-    private void parse_block (GLib.Queue<Token?> tokens, Ast.Scope scope, Token? begin) throws GLib.Error
+    private Ast.RValue parse_identifier (GLib.Queue<Token?> tokens, Token? identifier) throws GLib.Error
     {
+      Token? next;
+
+      next = tokens.pop_tail ();
+      if (next == null)
+        return new Ast.Variable (identifier.token);
+      else
+      {
+        if (next.klass.kind != TokenType.SEPARATOR)
+          throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), next.token);
+        else
+        {
+          if (next.token == "(")
+            return parse_call (tokens, identifier, next, false);
+          else
+          if (next.token == "=")
+            return parse_assign (tokens, identifier, next);
+          else
+            throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), next.token);
+        }
+      }
+    }
+
+    private Ast.Scope parse_block (GLib.Queue<Token?> tokens, Token? begin) throws GLib.Error
+    {
+      var scope = new Ast.Scope ();
+      var node = (Ast.Node) null;
       Token? token;
+
       while ((token = tokens.pop_tail ()) != null)
       {
         unowned var klass = token.klass;
         unowned var expr = token.token;
 
-        print ("t %u:%u '%s' '%s'\r\n", token.line, token.column, klass.kind.to_string (), expr);
-
         switch (klass.kind)
         {
           case TokenType.IDENTIFIER:
-            parse_identifier (tokens, scope, token);
+            {
+              node = parse_identifier (tokens, token);
+              scope.append (node);
+            }
             break;
           case TokenType.KEYWORD:
             {
               if (expr.has_prefix ("operator"))
-                define_operator (tokens, scope, token);
-              if (expr == "extern")
-                parse_extern (tokens, scope, token);
+              {
+                node = define_operator (tokens, token);
+                scope.append (node);
+              }
               else
-                throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", token.locate (), token.token);
+              if (expr == "extern")
+              {
+                node = parse_extern (tokens, token);
+                scope.append (node);
+              }
+              else
+                throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", token.locate (), expr);
             }
             break;
           case TokenType.SEPARATOR:
             {
               if (expr == "{")
               {
-                var scope2 = new Ast.Scope ();
-                parse_block (tokens, scope2, token);
-                scope.append (scope2);
+                node = parse_block (tokens, token);
+                scope.append (node);
               }
               else
-                throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", token.locate (), token.token);
+              if (expr == "}")
+                return scope;
+              else
+              if (expr == ";") { }
+              else
+                throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", token.locate (), expr);
             }
-            break;
-          case TokenType.OPERATOR:
-            throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", token.locate (), token.token);
-            break;
-          case TokenType.LITERAL:
-            throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", token.locate (), token.token);
             break;
           case TokenType.COMMENT:
             break;
+          default:
+            throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", token.locate (), expr);
         }
-
-        if (klass.kind == TokenType.SEPARATOR && expr == "}")
-          return;
       }
 
       throw new ParserError.EXPECTED_TOKEN ("%s: Expected end of block statement before end of input", begin.locate ());
@@ -309,23 +320,23 @@ namespace Abaco
 
     /* public API */
 
-    public Ast.Node parse (Token[] tokens) throws GLib.Error
+    public Ast.Scope parse (Token[] tokens) throws GLib.Error
       requires (tokens.length > 0)
     {
       if (freezed)
         error ("Frozen parser");
 
       var _tokens = new GLib.Queue<Token?> ();
+      var global = (Ast.Scope) null;
 
       foreach (unowned var token in tokens)
         _tokens.push_head (token);
 
-      var global = new Ast.Scope ();
-      var klass = new TokenClass (TokenType.SEPARATOR, ".");
-      var finish = Token ();
-      var begin = Token ();
-
       {
+        var klass = new TokenClass (TokenType.SEPARATOR, ".");
+        var finish = Token ();
+        var begin = Token ();
+
         finish.klass = klass;
         begin.klass = klass;
         finish.token = "}";
@@ -337,7 +348,13 @@ namespace Abaco
         finish.owner = tokens [0].owner;
         begin.owner = tokens [0].owner;
         _tokens.push_head (finish);
-        parse_block (_tokens, global, begin);
+
+        global = parse_block (_tokens, begin);
+
+        if (_tokens.length > 0)
+          throw new ParserError.FAILED ("Input left after parsing (usually means extra '}' tokens)");
+
+        print ("%s\r\n", global.debug (0));
       }
 
       freezed = true;
