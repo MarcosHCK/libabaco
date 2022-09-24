@@ -23,6 +23,34 @@ namespace Abaco.Ast
     protected Chain chain;
     private Datalist<string?> notes;
 
+    /* debug API */
+
+#if DEVELOPER == 1
+
+    private void debug_inner (int spaces)
+    {
+      var type = Type.from_instance (this);
+      var pre = string.nfill (spaces * 2, ' ');
+      unowned var child = (Chain?) null;
+      unowned var node = (Node?) null;
+
+      print ("%s- '%s'\r\n", pre, type.name ());
+      child = chain.children;
+      while (child != null)
+      {
+        node = (Node) child.self;
+        node.debug_inner (spaces + 1);
+        child = child.next;
+      }
+    }
+
+    public void debug ()
+    {
+      debug_inner (0);
+    }
+
+#endif // DEVELOPER
+
     /* public API */
 
     public void set_note (string index, string content) { notes.set_data (index, content); }
