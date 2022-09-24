@@ -202,9 +202,9 @@ namespace Abaco
     {
       chunk = new GLib.StringChunk (128);
       classes = new GenericArray<TokenClass> ();
+      classes.add (new TokenClass (TokenType.COMMENT, "/\\*(.*?)\\*/"));
       classes.add (new TokenClass (TokenType.LITERAL, "\"(.*?)\""));
       classes.add (new TokenClass (TokenType.LITERAL, "\'(.*?)\'"));
-      classes.add (new TokenClass (TokenType.COMMENT, "/\\*(.*?)\\*/"));
       classes.add (new TokenClass (TokenType.SEPARATOR, "[(){};,=]"));
       classes.add (new TokenClass.escape (TokenType.KEYWORD, "if"));
       classes.add (new TokenClass.escape (TokenType.KEYWORD, "else"));
