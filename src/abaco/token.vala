@@ -33,9 +33,6 @@ namespace Abaco
     public TokenType kind { get; private set; }
     public GLib.Regex rexp { get; private set; }
 
-    public const string ASSOC_LEFT = "left";
-    public const string ASSOC_RIGHT = "right";
-
     /* constructor */
 
     public TokenClass (TokenType type, string expr) throws GLib.Error

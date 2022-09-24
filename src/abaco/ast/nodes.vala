@@ -141,6 +141,9 @@ namespace Abaco.Ast
     public uint precedence { get; private set; }
     public string assoc { get; private set; }
 
+    public const string ASSOC_LEFT = "left";
+    public const string ASSOC_RIGHT = "right";
+
     /* debug API */
 
 #if DEVELOPER == 1
