@@ -20,7 +20,6 @@ namespace Abaco.Ast
 {
   internal abstract class Node
   {
-    protected Chain chain;
     private Datalist<string?> notes;
 
     internal abstract class Annotations
@@ -61,20 +60,14 @@ namespace Abaco.Ast
 
     /* constructors */
 
-    protected Node ()
-    {
-      chain.self = this;
-      notes = Datalist<string?> ();
-    }
-
-    ~Node ()
-    {
-      chain.destroy ();
-    }
-
     static construct
     {
       typeof (Annotations).class_ref ();
+    }
+
+    protected Node ()
+    {
+      notes = Datalist<string?> ();
     }
   }
 }

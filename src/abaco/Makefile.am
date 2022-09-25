@@ -86,7 +86,6 @@ libabaco_la_LDFLAGS=\
 #
 
 AM_VALAFLAGS=\
-	--vapidir=ast/ \
 	--vapidir=vapi/ \
 	--vapi-comments \
 	--hide-internal \
@@ -94,7 +93,6 @@ AM_VALAFLAGS=\
 	--header libabaco.h \
 	--library libabaco \
 	--pkg config \
-	--pkg chain \
 	--pkg patch \
 	-D DEBUG=${DEBUG} \
 	-D DEVELOPER=${DEVELOPER} \

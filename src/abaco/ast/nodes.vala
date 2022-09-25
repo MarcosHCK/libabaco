@@ -20,6 +20,8 @@ namespace Abaco.Ast
 {
   internal class Scope : Node
   {
+    private List<Node> children;
+
     /* debug API */
 
 #if DEVELOPER == 1
@@ -27,12 +29,11 @@ namespace Abaco.Ast
     public override string debug (size_t spaces)
     {
       var partial = base.debug (spaces);
-      unowned var child = (Chain?) chain.children;
-      unowned var node = (Node?) null;
+      unowned var child = children;
 
       while (child != null)
       {
-        node = (Node) child.self;
+        var node = (Node) child.data;
         partial += "\r\n" + node.debug (spaces + 1);
         child = child.next;
       }
@@ -43,16 +44,16 @@ namespace Abaco.Ast
 
     /* public API */
 
-    public void append (Node child) { Chain.append (ref chain, ref child.chain); }
-    public void prepend (Node child) { Chain.prepend (ref chain, ref child.chain); }
-    public uint n_children () { return Chain.n_children (ref chain); }
+    public void append (Node child) { children.append (child); }
+    public void prepend (Node child) { children.prepend (child); }
+    public uint n_children () { return children.length (); }
 
     public void children_foreach (GLib.Func<unowned Node> callback)
     {
-      unowned Chain? child = chain.children;
+      unowned var child = children;
       while (child != null)
       {
-        callback ((Node) child.self);
+        callback ((Node) child.data);
         child = child.next;
       }
     }
@@ -127,10 +128,30 @@ namespace Abaco.Ast
     }
   }
 
+  internal class Extern : Variable
+  {
+    /* debug API */
+
+#if DEVELOPER == 1
+
+    public override string debug (size_t spaces)
+    {
+      return ("%s, extern").printf (base.debug (spaces));
+    }
+
+#endif // DEVELOPER
+
+    /* constructor */
+
+    public Extern (string name)
+    {
+      base (name);
+    }
+  }
+
   internal class Function : Variable
   {
-    public unowned Scope scope { get; private set; }
-    public bool is_extern { get; private set; }
+    public Scope scope { get; private set; }
 
     /* debug API */
 
@@ -138,29 +159,25 @@ namespace Abaco.Ast
 
     public override string debug (size_t spaces)
     {
-      return ("%s, extern '%s'").printf
-              (base.debug (spaces),
-                is_extern ? "true" : "false")
-            + "\r\n"
-            + scope.debug (spaces + 1);
+      return
+        base.debug (spaces)
+      + "\r\n"
+      + scope.debug (spaces + 1);
     }
 
 #endif // DEVELOPER
 
     /* constructor */
 
-    public Function (string name, bool is_extern, Scope scope)
+    public Function (string name, Scope scope)
     {
       base (name);
       this.scope = scope;
-      this.is_extern = is_extern;
-      Chain.append (ref chain, ref scope.chain);
     }
   }
 
-  internal class Operator : Variable
+  internal class Operator : Function
   {
-    public unowned Scope scope { get; private set; }
     public uint precedence { get; private set; }
     public string assoc { get; private set; }
 
@@ -173,10 +190,10 @@ namespace Abaco.Ast
 
     public override string debug (size_t spaces)
     {
-      return ("%s, precedence %u, assoc '%s'").printf
-              (base.debug (spaces), precedence, assoc)
-            + "\r\n"
-            + scope.debug (spaces + 1);
+      return
+        ((Ast.Variable) this).debug (spaces)
+      + "\r\n"
+      + scope.debug (spaces + 1);
     }
 
 #endif // DEVELOPER
@@ -185,18 +202,16 @@ namespace Abaco.Ast
 
     public Operator (string name, uint precedence, string assoc, Scope scope)
     {
-      base (name);
+      base (name, scope);
       this.precedence = precedence;
       this.assoc = assoc;
-      this.scope = scope;
-      Chain.append (ref chain, ref scope.chain);
     }
   }
 
   internal class Assign : Node, RValue
   {
-    public unowned Variable variable { get; private set; }
-    public unowned RValue rvalue {get; private set; }
+    public Variable variable { get; private set; }
+    public RValue rvalue {get; private set; }
 
     /* debug API */
 
@@ -220,15 +235,13 @@ namespace Abaco.Ast
       base ();
       this.variable = variable;
       this.rvalue = rvalue;
-      Chain.append (ref chain, ref variable.chain);
-      Chain.append (ref chain, ref rvalue.chain);
     }
   }
 
   internal class Call : Node, RValue
   {
-    public unowned Unique target { get; private set; }
-    public unowned Scope arguments { get; private set; }
+    public Unique target { get; private set; }
+    public Scope arguments { get; private set; }
 
     /* debug API */
 
@@ -252,15 +265,13 @@ namespace Abaco.Ast
       base ();
       this.target = target;
       this.arguments = arguments;
-      Chain.append (ref chain, ref target.chain);
-      Chain.append (ref chain, ref arguments.chain);
     }
   }
 
   internal abstract class Conditional : Node
   {
-    public unowned RValue condition { get; private set; }
-    public unowned Scope direct { get; private set; }
+    public RValue condition { get; private set; }
+    public Scope direct { get; private set; }
 
     /* constructor */
 
@@ -269,8 +280,6 @@ namespace Abaco.Ast
       base ();
       this.condition = condition;
       this.direct = direct;
-      Chain.append (ref chain, ref condition.chain);
-      Chain.append (ref chain, ref direct.chain);
     }
   }
 
@@ -286,7 +295,7 @@ namespace Abaco.Ast
 
   internal class If : Conditional
   {
-    public unowned Scope reverse { get; private set; }
+    public Scope reverse { get; private set; }
 
     /* constructor */
 
@@ -294,7 +303,6 @@ namespace Abaco.Ast
     {
       base (condition, direct);
       this.reverse = reverse;
-      Chain.append (ref chain, ref reverse.chain);
     }
   }
 }
