@@ -26,8 +26,10 @@ namespace Abaco
 
   internal sealed class Lexer : GLib.Object
   {
+    public GLib.DataInputStream stream { get; construct; }
+    public string source { get; construct; }
     public bool naked { get; construct; }
-    private bool frozen { get; set; default = false; }
+
     private GenericArray<TokenClass> classes;
     private GLib.StringChunk chunk;
 
@@ -36,7 +38,7 @@ namespace Abaco
     private static bool is_empty (string token, size_t length)
     {
       unowned var ptr = token;
-      var left = token.char_count ((ssize_t) length);
+      unowned var left = token.char_count ((ssize_t) length);
 
       while (left-- > 0)
       {
@@ -50,9 +52,9 @@ namespace Abaco
     private unowned string prepare (string token, size_t length)
     {
       unowned var ptr = token;
-      var left = token.char_count ((ssize_t) length);
-      bool tail = false;
+      unowned var left = token.char_count ((ssize_t) length);
       size_t tailing = 0;
+      bool tail = false;
 
       while (left-- > 0)
       {
@@ -82,17 +84,20 @@ namespace Abaco
     return chunk.insert_len (token, (ssize_t) (length - tailing));
     }
 
-    private void add_operator (Token token)
+    private void add_operator (Token token) throws GLib.Error
     {
-      var name = token.token.utf8_offset (/* sizeof ("operator") */ 8);
+      unowned var nth = ("operator").char_count ();
+      unowned var index = token.token.index_of_nth_char (nth);
+      unowned var name = token.token.offset (index);
+
       classes.add (new TokenClass.escape (TokenType.OPERATOR, name));
     }
 
-    private Token[] tokenizei (string input, size_t length, uint ioff) throws GLib.Error
+    private uint tokenizei (Array<Token> tokens, string input, size_t length, uint linen, uint coln) throws GLib.Error
     {
-      var tokens = new Array<Token> ();
       var info = (GLib.MatchInfo) null;
       int i, start, stop;
+      uint added = 0;
       int last;
 
       for (i = 0; i < classes.length; i++)
@@ -110,9 +115,7 @@ namespace Abaco
             info.fetch_pos (0, out start, out stop);
             if (start > last)
             {
-              var sub = tokenizei (input.offset (last), start - last, ioff + last);
-              for (int j = 0; j < sub.length; j++)
-                tokens.append_val (sub [j]);
+              added += tokenizei (tokens, input.offset (last), start - last, linen, coln + last);
             }
 
             info.next ();
@@ -124,8 +127,11 @@ namespace Abaco
 
               token.token = value;
               token.klass = klass;
-              token.column = ioff + start;
+              token.owner = this;
+              token.line = linen;
+              token.column = coln + start;
               tokens.append_val (token);
+              ++added;
 
               if (klass.kind == TokenType.KEYWORD
                 && value.has_prefix ("operator"))
@@ -137,121 +143,85 @@ namespace Abaco
 
           if (length > last)
           {
-            var sub = tokenizei (input.offset (last), length - last, ioff + last);
-            for (int j = 0; j < sub.length; j++)
-              tokens.append_val (sub [j]);
+            added += tokenizei (tokens, input.offset (last), length - last, linen, coln + last);
           }
         }
 
         break;
       }
 
-      if (tokens.length == 0)
-      {
-        if (is_empty (input, length))
-          return tokens.steal ();
-        throw new LexerError.UNKNOWN_TOKEN ("%lli: unknown token '%s'", ioff, prepare (input, length));
-      }
-    return tokens.steal ();
+      if (added == 0 && !is_empty (input, length))
+        throw new LexerError.UNKNOWN_TOKEN ("%s: %u: %u: unknown token '%s'", source, linen, coln, prepare (input, length));
+    return added;
     }
 
-    private Token[] tokenizes (GLib.DataInputStream stream, string source, GLib.Cancellable? cancellable = null) throws GLib.Error
+    private void tokenizes (Array<Token> tokens, GLib.Cancellable? cancellable = null) throws GLib.Error
     {
-      var tokens = new Array<Token> ();
       var linesz = (size_t) 0;
       var line = (string) null;
       var count = 1;
 
-      while (true)
-      {
-        line = stream.read_line_utf8 (out linesz, cancellable);
-        if (line == null)
-          break;
-        else
-        {
-          try
-          {
-            var sub = tokenizei (line, linesz, 1);
-            for (int j = 0; j < sub.length; j++)
-            {
-              var token = sub [j];
-                  token.line = count;
-                  token.source = "some file";
-                  token.owner = this;
-                  tokens.append_val (token);
-            }
-          } catch (GLib.Error e) {
-            Patch.prefix_error (ref e, "%i: ", count);
-            throw e;
-          }
-        }
-
-        ++count;
-      }
-    return tokens.steal ();
+      while ((line = stream.read_line_utf8 (out linesz, cancellable)) != null)
+        tokenizei (tokens, line, linesz, count++, 1);
     }
 
-    private void tokenize_stdlib (GLib.Resource stdlib, Array<Token> tokens, string path, GLib.Cancellable? cancellable = null) throws GLib.Error
+    private void include (Array<Token> tokens, GLib.DataInputStream stream, string source, GLib.Cancellable? cancellable = null) throws GLib.Error
     {
-      unowned var source = chunk.insert ("resource://" + path);
+      var lexer = new Lexer (stream, source, false);
+          lexer.classes = classes;
+          lexer.tokenizes (tokens, cancellable);
+    }
+
+    private void include_stdlib (Array<Token> tokens, string path, GLib.Cancellable? cancellable = null) throws GLib.Error
+    {
+      var stdlib = Patch.Stdlib.load ();
+      var display = "resources://" + path;
       var input = stdlib.open_stream (path, 0);
       var stream = new GLib.DataInputStream (input);
-      var sub = tokenizes (stream, source, cancellable);
-      for (int j = 0; j < sub.length; j++)
-          tokens.append_val (sub [j]);
+
+      include (tokens, stream, display, cancellable);
     }
 
     /* public API */
 
-    public Token[] tokenize (GLib.DataInputStream stream, GLib.Cancellable? cancellable = null) throws GLib.Error
+    public Token[] tokenize (GLib.Cancellable? cancellable = null) throws GLib.Error
     {
-      if (frozen)
-        error ("Frozen lexer");
-
-      unowned var source = chunk.insert ("some place");
       var tokens = new Array<Token> ();
-
-      try
-      {
-        if (!naked)
-        {
-          var stdlib = Patch.Stdlib.load ();
-          tokenize_stdlib (stdlib, tokens, "/org/hck/libabaco/stdlib/arithmetics.abc", cancellable);
-        }
-
-        var sub = tokenizes (stream, source, cancellable);
-        for (int j = 0; j < sub.length; j++)
-          tokens.append_val (sub [j]);
-      } catch (GLib.Error e) {
-        Patch.prefix_error (ref e, "%s: ", source);
-        throw e;
-      }
+      include_stdlib (tokens, "/org/hck/libabaco/stdlib/arithmetics.abc", cancellable);
+      tokenizes (tokens, cancellable);
     return tokens.steal ();
     }
 
     /* constructor */
 
-    public Lexer (bool naked)
+    public Lexer (GLib.DataInputStream stream, string source, bool naked)
     {
-      Object (naked : naked);
+      Object (stream : stream, source : source, naked : naked);
     }
 
     construct
     {
-      chunk = new GLib.StringChunk (128);
+      chunk = new GLib.StringChunk (2048);
       classes = new GenericArray<TokenClass> ();
-      classes.add (new TokenClass (TokenType.COMMENT, "/\\*(.*?)\\*/"));
-      classes.add (new TokenClass (TokenType.KEYWORD, "operator([^_\\ ])"));
-      classes.add (new TokenClass (TokenType.LITERAL, "\"(.*?)\""));
-      classes.add (new TokenClass (TokenType.LITERAL, "\'(.*?)\'"));
-      classes.add (new TokenClass (TokenType.SEPARATOR, "[(){};,=]"));
-      classes.add (new TokenClass.escape (TokenType.KEYWORD, "if"));
-      classes.add (new TokenClass.escape (TokenType.KEYWORD, "else"));
-      classes.add (new TokenClass.escape (TokenType.KEYWORD, "while"));
-      classes.add (new TokenClass.escape (TokenType.KEYWORD, "extern"));
-      classes.add (new TokenClass.escape (TokenType.KEYWORD, "return"));
-      classes.add (new TokenClass (TokenType.IDENTIFIER, "[a-zA-Z_][a-zA-Z_0-9]*"));
-      classes.add (new TokenClass (TokenType.LITERAL, "[0-9\\.][a-zA-Z_0-9\\.]*"));
+
+      try
+      {
+        classes.add (new TokenClass (TokenType.COMMENT, "/\\*(.*?)\\*/"));
+        classes.add (new TokenClass (TokenType.KEYWORD, "operator([^_\\ ])"));
+        classes.add (new TokenClass (TokenType.LITERAL, "\"(.*?)\""));
+        classes.add (new TokenClass (TokenType.LITERAL, "\'(.*?)\'"));
+        classes.add (new TokenClass (TokenType.SEPARATOR, "[(){};,=]"));
+        classes.add (new TokenClass.escape (TokenType.KEYWORD, "if"));
+        classes.add (new TokenClass.escape (TokenType.KEYWORD, "else"));
+        classes.add (new TokenClass.escape (TokenType.KEYWORD, "while"));
+        classes.add (new TokenClass.escape (TokenType.KEYWORD, "extern"));
+        classes.add (new TokenClass.escape (TokenType.KEYWORD, "return"));
+        classes.add (new TokenClass (TokenType.IDENTIFIER, "[a-zA-Z_][a-zA-Z_0-9]*"));
+        classes.add (new TokenClass (TokenType.LITERAL, "[0-9\\.][a-zA-Z_0-9\\.]*"));
+      } catch (GLib.Error e) {
+        error (@"$(e.domain):$(e.code):$(e.message)");
+        assert_not_reached ();
+      }
     }
   }
 }

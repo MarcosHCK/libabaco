@@ -37,7 +37,7 @@ namespace Abaco
     public GLib.Bytes compile (GLib.InputStream input) throws GLib.Error
     {
       var stream = new GLib.DataInputStream (input);
-      var tokens = (new Lexer (naked)).tokenize (stream);
+      var tokens = (new Lexer (stream, "string", naked)).tokenize ();
       var tree = (new Parser (naked)).parse (tokens);
     return null;
     }
