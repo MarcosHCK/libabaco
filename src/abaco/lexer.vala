@@ -27,6 +27,7 @@ namespace Abaco
   internal sealed class Lexer : GLib.Object
   {
     public bool naked { get; construct; }
+    private bool frozen { get; set; default = false; }
     private GenericArray<TokenClass> classes;
     private GLib.StringChunk chunk;
 
@@ -154,9 +155,7 @@ namespace Abaco
     return tokens.steal ();
     }
 
-    /* public API */
-
-    public Token[] tokenize (GLib.DataInputStream stream, GLib.Cancellable? cancellable = null) throws GLib.Error
+    private Token[] tokenizes (GLib.DataInputStream stream, string source, GLib.Cancellable? cancellable = null) throws GLib.Error
     {
       var tokens = new Array<Token> ();
       var linesz = (size_t) 0;
@@ -177,6 +176,7 @@ namespace Abaco
             {
               var token = sub [j];
                   token.line = count;
+                  token.source = "some file";
                   token.owner = this;
                   tokens.append_val (token);
             }
@@ -187,6 +187,44 @@ namespace Abaco
         }
 
         ++count;
+      }
+    return tokens.steal ();
+    }
+
+    private void tokenize_stdlib (GLib.Resource stdlib, Array<Token> tokens, string path, GLib.Cancellable? cancellable = null) throws GLib.Error
+    {
+      unowned var source = chunk.insert ("resource://" + path);
+      var input = stdlib.open_stream (path, 0);
+      var stream = new GLib.DataInputStream (input);
+      var sub = tokenizes (stream, source, cancellable);
+      for (int j = 0; j < sub.length; j++)
+          tokens.append_val (sub [j]);
+    }
+
+    /* public API */
+
+    public Token[] tokenize (GLib.DataInputStream stream, GLib.Cancellable? cancellable = null) throws GLib.Error
+    {
+      if (frozen)
+        error ("Frozen lexer");
+
+      unowned var source = chunk.insert ("some place");
+      var tokens = new Array<Token> ();
+
+      try
+      {
+        if (!naked)
+        {
+          var stdlib = Patch.Stdlib.load ();
+          tokenize_stdlib (stdlib, tokens, "/org/hck/libabaco/stdlib/arithmetics.abc", cancellable);
+        }
+
+        var sub = tokenizes (stream, source, cancellable);
+        for (int j = 0; j < sub.length; j++)
+          tokens.append_val (sub [j]);
+      } catch (GLib.Error e) {
+        Patch.prefix_error (ref e, "%s: ", source);
+        throw e;
       }
     return tokens.steal ();
     }
@@ -203,6 +241,7 @@ namespace Abaco
       chunk = new GLib.StringChunk (128);
       classes = new GenericArray<TokenClass> ();
       classes.add (new TokenClass (TokenType.COMMENT, "/\\*(.*?)\\*/"));
+      classes.add (new TokenClass (TokenType.KEYWORD, "operator([^_\\ ])"));
       classes.add (new TokenClass (TokenType.LITERAL, "\"(.*?)\""));
       classes.add (new TokenClass (TokenType.LITERAL, "\'(.*?)\'"));
       classes.add (new TokenClass (TokenType.SEPARATOR, "[(){};,=]"));
@@ -211,7 +250,6 @@ namespace Abaco
       classes.add (new TokenClass.escape (TokenType.KEYWORD, "while"));
       classes.add (new TokenClass.escape (TokenType.KEYWORD, "extern"));
       classes.add (new TokenClass.escape (TokenType.KEYWORD, "return"));
-      classes.add (new TokenClass (TokenType.KEYWORD, "operator([^_\\ ])"));
       classes.add (new TokenClass (TokenType.IDENTIFIER, "[a-zA-Z_][a-zA-Z_0-9]*"));
       classes.add (new TokenClass (TokenType.LITERAL, "[0-9\\.][a-zA-Z_0-9\\.]*"));
     }

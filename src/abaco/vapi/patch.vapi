@@ -20,4 +20,11 @@ namespace Patch
 {
   [CCode (cheader_filename = "glib.h", cname = "g_prefix_error")]
   public static void prefix_error (ref GLib.Error? error, string format, ...);
+
+  [CCode (cheader_filename = "stdlib/bundle.h")]
+  public class Stdlib
+  {
+    [CCode (cname = "bundle_get_resource")]
+    public static GLib.Resource load ();
+  }
 }

@@ -124,39 +124,12 @@ AC_PROG_RANLIB
 AM_PROG_VALAC
 
 PKG_PROG_PKG_CONFIG
-GOBJECT_INTROSPECTION_REQUIRE([1.68.0])
 
-AC_PATH_PROGS([LUA], [luajit], [no])
-if test "x$LUA" = "xno"; then
-  AC_PATH_PROGS([LUA], [lua-interpreter], [no], [/etc/alternatives/])
-  if test "x$LUA" = "xno"; then
-    AC_PATH_PROGS([LUA], [lua lua-any lua5.4 lua5.3 lua5.2 lua5.1])
-    if test "x$LUA" = "xno"; then
-      AC_MSG_FAILURE([no lua interpreter found])
-    else
-      AC_SUBST([DYNASM], [\${LUA}\ \${top_builddir}/build/dynasm/dynasm.lua])
-    fi
-  else
-    AC_SUBST([DYNASM], [\${LUA}\ \${top_builddir}/build/dynasm/dynasm.lua])
-  fi
-
-  AC_SUBST([LUA_VERSION])
-  LUA_VERSION=$($LUA -v | $AWK 'match($0,/@<:@0-9@:>@+\.@<:@0-9@:>@+/) {print substr($0,RSTART,RLENGTH)}')
-  AC_SUBST([LUA_VERSION_MAYOR])
-  LUA_VERSION_MAYOR=$(echo "$LUA_VERSION" | sed -e 's/\(@<:@0-9@:>@*\)\.\(@<:@0-9@:>@*\)/\1/')
-  AC_SUBST([LUA_VERSION_MINOR])
-  LUA_VERSION_MINOR=$(echo "$LUA_VERSION" | sed -e 's/\(@<:@0-9@:>@*\)\.\(@<:@0-9@:>@*\)/\1/')
-
-  HAS_BIT=$($LUA -e "if pcall(require,'bit') then print('yes') end")
-  if test "x$HAS_BIT" != "xyes"; then
-    AC_MSG_FAILURE([please install bit library for version $LUA_VERSION])
-  fi
-else
-  AC_SUBST([DYNASM], [\${LUA}\ \${top_builddir}/build/dynasm/dynasm.lua])
+AC_CHECK_PROG([GLIB_COMPILE_RESOURCES], [glib-compile-resources], [glib-compile-resources], [no])
+if test "x$GLIB_COMPILE_RESOURCES" = "xno"; then
+  AC_MSG_FAILURE([glib-compile-resources not found our your system])
 fi
 
-AC_SUBST([DYNASM_CFLAGS], [-I\${top_builddir}/build/dynasm/])
-AC_SUBST([DYNASM_LIBS], [-I\${top_builddir}/build/dynasm/])
 AC_SUBST([ABACO_CFLAGS], [-I\${top_builddir}/src/abaco/])
 AC_SUBST([ABACO_LIBS], [\${top_builddir}/src/abaco/libabaco.la])
 

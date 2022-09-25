@@ -40,4 +40,6 @@ compiler.c
 lexer.c
 literal.c
 parser.c
+stdlib/bundle.c
+stdlib/bundle.h
 token.c

@@ -55,6 +55,7 @@ namespace Abaco
 
     public uint line;
     public uint column;
+    public unowned string source;
 
     /* public API */
 

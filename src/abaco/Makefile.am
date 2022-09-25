@@ -49,6 +49,25 @@ valapkg_DATA=\
 	$(VOID)
 
 #
+# Abaco sources
+#
+
+GRESOURCES=\
+	$(shell $(GLIB_COMPILE_RESOURCES) --generate-dependencies bundle.gresources.xml) \
+	$(VOID)
+
+CLEANFILES=\
+	stdlib/bundle.c \
+	stdlib/bundle.h \
+	$(VOID)
+
+stdlib/bundle.c: stdlib/bundle.gresources.xml $(GRESOURCES) stdlib/bundle.h
+	$(GLIB_COMPILE_RESOURCES) --target=$@ --generate-source $<
+
+stdlib/bundle.h: stdlib/bundle.gresources.xml $(GRESOURCES)
+	$(GLIB_COMPILE_RESOURCES) --target=$@ --generate-header $<
+
+#
 # Binaries and libraries
 # - sources
 #
@@ -61,6 +80,7 @@ libabaco_la_SOURCES=\
 	libabaco.c \
 	literal.vala \
 	parser.vala \
+	stdlib/bundle.c \
 	token.vala \
 	$(VOID)
 libabaco_la_CFLAGS=\

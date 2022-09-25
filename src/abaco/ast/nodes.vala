@@ -190,10 +190,14 @@ namespace Abaco.Ast
 
     public override string debug (size_t spaces)
     {
+      var partial = base.debug (spaces);
+      var index = partial.index_of_char ('\r');
+      var last = partial.index_of_nth_char (index);
+
       return
-        ((Ast.Variable) this).debug (spaces)
-      + "\r\n"
-      + scope.debug (spaces + 1);
+        ("%.*s, precedence %u, assoc '%s'%s").printf
+          (last, partial, precedence, assoc,
+              partial.offset (last));
     }
 
 #endif // DEVELOPER
