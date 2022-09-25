@@ -60,6 +60,23 @@ namespace Abaco.Ast
 
   internal interface RValue : Node { }
 
+  internal interface Named : Node
+  {
+    public abstract string name { get; set; }
+  }
+
+  internal interface Unique : Node
+  {
+    public abstract string id { get; set; }
+
+    /* public API */
+
+    public static string next ()
+    {
+      return Uuid.string_random ();
+    }
+  }
+
   internal class Constant : Node, RValue
   {
     public string value { get; private set; }
@@ -84,8 +101,9 @@ namespace Abaco.Ast
     }
   }
 
-  internal class Variable : Node, RValue
+  internal class Variable : Node, Named, RValue, Unique
   {
+    public string name { get; private set; }
     public string id { get; private set; }
 
     /* debug API */
@@ -94,23 +112,25 @@ namespace Abaco.Ast
 
     public override string debug (size_t spaces)
     {
-      return ("%s, id '%s'").printf (base.debug (spaces), id);
+      return ("%s, name '%s', id '%s'").printf (base.debug (spaces), name, id);
     }
 
 #endif // DEVELOPER
 
     /* constructor */
 
-    public Variable (string id)
+    public Variable (string name)
     {
       base ();
-      this.id = id;
+      this.id = Unique.next ();
+      this.name = name;
     }
   }
 
   internal class Function : Variable
   {
     public unowned Scope scope { get; private set; }
+    public bool is_extern { get; private set; }
 
     /* debug API */
 
@@ -118,7 +138,9 @@ namespace Abaco.Ast
 
     public override string debug (size_t spaces)
     {
-      return base.debug (spaces)
+      return ("%s, extern '%s'").printf
+              (base.debug (spaces),
+                is_extern ? "true" : "false")
             + "\r\n"
             + scope.debug (spaces + 1);
     }
@@ -127,10 +149,11 @@ namespace Abaco.Ast
 
     /* constructor */
 
-    public Function (string id, Scope scope)
+    public Function (string name, bool is_extern, Scope scope)
     {
-      base (id);
+      base (name);
       this.scope = scope;
+      this.is_extern = is_extern;
       Chain.append (ref chain, ref scope.chain);
     }
   }
@@ -160,9 +183,9 @@ namespace Abaco.Ast
 
     /* constructor */
 
-    public Operator (string id, uint precedence, string assoc, Scope scope)
+    public Operator (string name, uint precedence, string assoc, Scope scope)
     {
-      base (id);
+      base (name);
       this.precedence = precedence;
       this.assoc = assoc;
       this.scope = scope;
@@ -204,8 +227,7 @@ namespace Abaco.Ast
 
   internal class Call : Node, RValue
   {
-    public string name { get; private set; }
-    public bool ccall { get; private set; }
+    public unowned Unique target { get; private set; }
     public unowned Scope arguments { get; private set; }
 
     /* debug API */
@@ -214,9 +236,9 @@ namespace Abaco.Ast
 
     public override string debug (size_t spaces)
     {
-      return ("%s, name '%s', ccall '%s'").printf
-              (base.debug (spaces), name,
-                ccall ? "true" : "false")
+      return base.debug (spaces)
+              + "\r\n"
+              + target.debug (spaces + 1)
               + "\r\n"
               + arguments.debug (spaces + 1);
     }
@@ -225,12 +247,12 @@ namespace Abaco.Ast
 
     /* constructor */
 
-    public Call (string name, bool ccall, Scope arguments)
+    public Call (Unique target, Scope arguments)
     {
       base ();
-      this.name = name;
-      this.ccall = ccall;
+      this.target = target;
       this.arguments = arguments;
+      Chain.append (ref chain, ref target.chain);
       Chain.append (ref chain, ref arguments.chain);
     }
   }

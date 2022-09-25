@@ -23,6 +23,20 @@ namespace Abaco.Ast
     protected Chain chain;
     private Datalist<string?> notes;
 
+    internal abstract class Annotations
+    {
+      public static GLib.Quark line_number;
+      public static GLib.Quark column_number;
+
+      /* constructor */
+
+      static construct
+      {
+        line_number = Quark.from_string ("abaco-node-line-number");
+        column_number = Quark.from_string ("abaco-node-column-number");
+      }
+    }
+
     /* debug API */
 
 #if DEVELOPER == 1
@@ -56,6 +70,11 @@ namespace Abaco.Ast
     ~Node ()
     {
       chain.destroy ();
+    }
+
+    static construct
+    {
+      typeof (Annotations).class_ref ();
     }
   }
 }

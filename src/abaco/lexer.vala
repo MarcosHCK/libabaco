@@ -210,6 +210,7 @@ namespace Abaco
       classes.add (new TokenClass.escape (TokenType.KEYWORD, "else"));
       classes.add (new TokenClass.escape (TokenType.KEYWORD, "while"));
       classes.add (new TokenClass.escape (TokenType.KEYWORD, "extern"));
+      classes.add (new TokenClass.escape (TokenType.KEYWORD, "return"));
       classes.add (new TokenClass (TokenType.KEYWORD, "operator([^_\\ ])"));
       classes.add (new TokenClass (TokenType.IDENTIFIER, "[a-zA-Z_][a-zA-Z_0-9]*"));
       classes.add (new TokenClass (TokenType.LITERAL, "[0-9\\.][a-zA-Z_0-9\\.]*"));

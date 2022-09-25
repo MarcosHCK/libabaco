@@ -60,7 +60,7 @@ namespace Abaco
 
     public string locate ()
     {
-      return @"$line: $column: ";
+      return @"$line: $column";
     }
   }
 }
