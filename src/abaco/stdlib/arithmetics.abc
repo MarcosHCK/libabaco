@@ -3,7 +3,7 @@ extern __sub;
 extern __mul;
 extern __div;
 
-operator+ 2 left { __add (x, y); }
-operator- 2 left { __sub (x, y); }
-operator* 3 left { __mul (x, y); }
-operator/ 3 left { __div (x, y); }
+operator+ 2 left { __add (a, b); }
+operator- 2 left { __sub (a, b); }
+operator* 3 left { __mul (a, b); }
+operator/ 3 left { __div (a, b); }

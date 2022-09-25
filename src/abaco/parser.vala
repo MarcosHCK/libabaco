@@ -97,10 +97,166 @@ namespace Abaco
       annotate (@var, token);
     }
 
+    private bool arglist_dotorpar (Token? token, out unichar char_)
+    {
+      if (token.klass.kind == TokenType.SEPARATOR)
+      {
+        unowned var t = token.token;
+        unowned var c = t.get_char ();
+        unowned var n = t.next_char ();
+
+        if (n.get_char () == (unichar) 0)
+        {
+          char_ = c;
+          return c == (unichar) ','
+              || c == (unichar) ')';
+        }
+      }
+    return false;
+    }
+
+    private Ast.List create_function_args (GLib.Queue<Token?> tokens, Token? token) throws GLib.Error
+    {
+      Ast.List arguments = new Ast.List ();
+      Token? next;
+
+      while ((next = tokens.pop_tail ()) != null)
+      {
+        unowned var klass = next.klass;
+        unowned var expr = next.token;
+        unowned var c = (unichar) 0;
+
+        switch (klass.kind)
+        {
+          case TokenType.IDENTIFIER:
+            {
+              var sep = (Token?) null;
+              if ((sep = tokens.pop_tail ()) == null)
+                throw new ParserError.EXPECTED_TOKEN ("%s: Expected ')' token before end of input", token.locate ());
+              if (!arglist_dotorpar (sep, out c))
+                throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", sep.locate (), sep.token);
+              else
+              {
+                var arg = new Ast.Variable (next.token);
+                    arguments.append (arg);
+
+                if (c == (unichar) ')')
+                  return arguments;
+              }
+            }
+            break;
+          case TokenType.SEPARATOR:
+            {
+              if (arglist_dotorpar (next, out c))
+              {
+                if (c == (unichar) ')')
+                  return arguments;
+                else
+                  throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), expr);
+              }
+              else
+                throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), expr);
+            }
+            break;
+
+          default:
+            throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), expr);
+        }
+      }
+
+      throw new ParserError.EXPECTED_TOKEN ("%s: Expected ')' token before end of input", token.locate ());
+    }
+
+    private Ast.Scope create_function_scope (GLib.Queue<Token?> tokens, Token? token, Ast.List arguments) throws GLib.Error
+    {
+      var save = new GLib.Queue<Ast.Variable> ();
+      var undefs = new GLib.Queue<string> ();
+      var saved = (Ast.Variable?) null;
+      var undef = (string?) null;
+      var scope = (Ast.Scope) null;
+
+      foreach (unowned var child in arguments.children)
+      {
+        unowned var @var = (Ast.Variable?) null;
+        unowned var arg = (Ast.Variable?) child;
+        unowned var name = arg.name;
+
+        if (!variables.lookup_extended (name, null, out @var))
+          undefs.push_head (name);
+        else
+          save.push_head (@var);
+
+        variables.insert (name, arg);
+      }
+
+      scope = parse_block (tokens, token);
+      while ((saved = save.pop_tail ()) != null)
+        variables.insert (saved.name, saved);
+      while ((undef = undefs.pop_tail ()) != null)
+        variables.remove (undef);
+    return scope;
+    }
+
+    private Ast.Function create_function (GLib.Queue<Token?> tokens, Token? token) throws GLib.Error
+    {
+      Token? next;
+      Token? identifier;
+      Ast.List arguments;
+      Ast.Scope scope;
+
+      next = tokens.pop_tail ();
+      if (next == null)
+        throw new ParserError.EXPECTED_TOKEN ("%s: Expected identifier after '%s' keyword", token.locate (), token.token);
+      else
+      {
+        if (next.klass.kind != TokenType.IDENTIFIER)
+          throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), next.token);
+        else
+        {
+          identifier = (owned) next;
+        }
+      }
+
+      next = tokens.pop_tail ();
+      if (next == null)
+        throw new ParserError.EXPECTED_TOKEN ("%s: Expected identifier after '%s' keyword", token.locate (), token.token);
+      else
+      {
+        if (next.klass.kind != TokenType.SEPARATOR || next.token != "(")
+          throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), next.token);
+        else
+        {
+          arguments = create_function_args (tokens, token);
+        }
+      }
+
+      next = tokens.pop_tail ();
+      if (next == null)
+        throw new ParserError.EXPECTED_TOKEN ("%s: Expected identifier after '%s' keyword", token.locate (), token.token);
+      else
+      {
+        if (next.klass.kind != TokenType.SEPARATOR || next.token != "{")
+          throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), next.token);
+        else
+        {
+          scope = create_function_scope (tokens, next, arguments);
+        }
+      }
+    return new Ast.Function (identifier.token, arguments, scope);
+    }
+
+    private void define_function (GLib.Queue<Token?> tokens, Token? token) throws GLib.Error
+    {
+      var func = create_function (tokens, token);
+      variables.insert (func.name, func);
+      annotate (func, token);
+    }
+
     private Ast.Operator create_operator (GLib.Queue<Token?> tokens, Token? token) throws GLib.Error
     {
       Token? next;
-      var oper = (Ast.Operator) null;
+      Ast.List arguments;
+      Ast.Scope scope;
       unowned uint precedence = 0;
       unowned string assoc = null;
 
@@ -144,11 +300,13 @@ namespace Abaco
           throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", next.locate (), next.token);
         else
         {
-          var scope = parse_block (tokens, next);
-          var expr = token.token;
-          return new Ast.Operator (expr, precedence, assoc, scope);
+          arguments = new Ast.List ();
+          arguments.append (new Ast.Variable ("a"));
+          arguments.append (new Ast.Variable ("b"));
+          scope = create_function_scope (tokens, next, arguments);
         }
       }
+    return new Ast.Operator (token.token, precedence, assoc, arguments, scope);
     }
 
     private void define_operator (GLib.Queue<Token?> tokens, Token? token) throws GLib.Error
@@ -165,18 +323,6 @@ namespace Abaco
       if (@var != null && @var is Ast.Operator)
         return (Ast.Operator) @var;
     return null;
-    }
-
-    private Ast.Function create_function (GLib.Queue<Token?> tokens, Token? token) throws GLib.Error
-    {
-      assert_not_reached ();
-    }
-
-    private void define_function (GLib.Queue<Token?> tokens, Token? token) throws GLib.Error
-    {
-      var func = create_operator (tokens, token);
-      variables.insert (func.name, func);
-      annotate (func, token);
     }
 
     private void varguard (Token? token, Token? last) throws GLib.Error
@@ -354,7 +500,7 @@ namespace Abaco
 
     private Ast.RValue parse_call (GLib.Queue<Token?> tokens, Token? identifier, Token? next) throws GLib.Error
     {
-      var arguments = new Ast.Scope ();
+      var arguments = new Ast.List ();
       var extra = new GLib.Queue<Token?> ();
       var rvalue = (Ast.RValue) null;
       var last = (Token?) identifier;
@@ -587,13 +733,19 @@ namespace Abaco
               if (expr.has_prefix ("operator"))
                 define_operator (tokens, token);
               else
-              if (expr == "function")
-                define_function (tokens, token);
-              else
-              if (expr == "extern")
-                define_extern (tokens, token);
-              else
-                throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", token.locate (), expr);
+              {
+                switch (expr)
+                {
+                  case "extern":
+                    define_extern (tokens, token);
+                    break;
+                  case "function":
+                    define_function (tokens, token);
+                    break;
+                  default:
+                    throw new ParserError.UNEXPECTED_TOKEN ("%s: Unexpected token '%s'", token.locate (), expr);
+                }
+              }
             }
             break;
           case TokenType.SEPARATOR:

@@ -18,9 +18,9 @@
 
 namespace Abaco.Ast
 {
-  internal class Scope : Node
+  internal class List : Node
   {
-    private List<Node> children;
+    public unowned GLib.List<Node> children { get; private set; }
 
     /* debug API */
 
@@ -58,6 +58,8 @@ namespace Abaco.Ast
       }
     }
   }
+
+  internal class Scope : List { }
 
   internal interface RValue : Node { }
 
@@ -151,6 +153,7 @@ namespace Abaco.Ast
 
   internal class Function : Variable
   {
+    public List arguments { get; private set; }
     public Scope scope { get; private set; }
 
     /* debug API */
@@ -169,9 +172,10 @@ namespace Abaco.Ast
 
     /* constructor */
 
-    public Function (string name, Scope scope)
+    public Function (string name, List arguments, Scope scope)
     {
       base (name);
+      this.arguments = arguments;
       this.scope = scope;
     }
   }
@@ -204,9 +208,9 @@ namespace Abaco.Ast
 
     /* constructor */
 
-    public Operator (string name, uint precedence, string assoc, Scope scope)
+    public Operator (string name, uint precedence, string assoc, List arguments, Scope scope)
     {
-      base (name, scope);
+      base (name, arguments, scope);
       this.precedence = precedence;
       this.assoc = assoc;
     }
@@ -245,7 +249,7 @@ namespace Abaco.Ast
   internal class Call : Node, RValue
   {
     public Unique target { get; private set; }
-    public Scope arguments { get; private set; }
+    public List arguments { get; private set; }
 
     /* debug API */
 
@@ -264,7 +268,7 @@ namespace Abaco.Ast
 
     /* constructor */
 
-    public Call (Unique target, Scope arguments)
+    public Call (Unique target, List arguments)
     {
       base ();
       this.target = target;
