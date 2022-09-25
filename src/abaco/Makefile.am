@@ -53,7 +53,7 @@ valapkg_DATA=\
 #
 
 GRESOURCES=\
-	$(shell $(GLIB_COMPILE_RESOURCES) --generate-dependencies bundle.gresources.xml) \
+	$(shell $(GLIB_COMPILE_RESOURCES) --generate-dependencies stdlib/bundle.gresources.xml) \
 	$(VOID)
 
 CLEANFILES=\
@@ -75,12 +75,12 @@ stdlib/bundle.h: stdlib/bundle.gresources.xml $(GRESOURCES)
 libabaco_la_SOURCES=\
 	ast/node.vala \
 	ast/nodes.vala \
+	stdlib/bundle.c \
 	compiler.vala \
 	lexer.vala \
 	libabaco.c \
 	literal.vala \
 	parser.vala \
-	stdlib/bundle.c \
 	token.vala \
 	$(VOID)
 libabaco_la_CFLAGS=\
